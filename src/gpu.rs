@@ -1,8 +1,4 @@
-use std::sync::Arc;
-
 use wgpu::util::DeviceExt;
-
-use crate::shaders::U32_IDENTITY_WGSL;
 
 pub struct GpuDraw<'a> {
     surface: wgpu::Surface<'a>,
@@ -49,14 +45,16 @@ pub async fn device(adapter: &wgpu::Adapter) -> anyhow::Result<(wgpu::Device, wg
     Ok(device)
 }
 
-pub async fn compute<I, O>(
+pub async fn compute<I, G, O>(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     shader: wgpu::ShaderSource<'_>,
+    global: &G,
     input_seq: &[I],
     output_seq: &mut [O],
 ) where
     I: bytemuck::Pod,
+    G: bytemuck::Pod,
     O: bytemuck::Pod,
 {
     let desc = wgpu::ShaderModuleDescriptor {
@@ -86,6 +84,12 @@ pub async fn compute<I, O>(
         usage: wgpu::BufferUsages::STORAGE,
     };
     let in_buf = device.create_buffer_init(&desc);
+    let desc = wgpu::util::BufferInitDescriptor {
+        label: Some("global buf"),
+        contents: bytemuck::bytes_of(global),
+        usage: wgpu::BufferUsages::UNIFORM,
+    };
+    let global_buf = device.create_buffer_init(&desc);
 
     let desc = wgpu::ComputePipelineDescriptor {
         label: None,
@@ -109,6 +113,10 @@ pub async fn compute<I, O>(
                 binding: 1,
                 resource: out_buf.as_entire_binding(),
             },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: global_buf.as_entire_binding(),
+            },
         ],
     };
     let bind_group = device.create_bind_group(&desc);
@@ -128,7 +136,7 @@ pub async fn compute<I, O>(
     }
     command.copy_buffer_to_buffer(&out_buf, 0, &staging_buf, 0, out_buf_size);
 
-    let task = queue.submit([command.finish()]);
+    queue.submit([command.finish()]);
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(1);
     let staging_slice = staging_buf.slice(..);
@@ -146,21 +154,32 @@ pub async fn compute<I, O>(
 }
 #[tokio::test]
 async fn test_compute() {
+    use std::sync::Arc;
+
+    use crate::shaders::U32_IDENTITY_WGSL;
+
     let instance = instance();
     let adapter = adapter(&instance, None).await.unwrap();
     let (device, queue) = device(&adapter).await.unwrap();
     let device = Arc::new(device);
-    let identity_src = wgpu::ShaderSource::Wgsl(U32_IDENTITY_WGSL.into());
-
     std::thread::spawn({
         let device = Arc::clone(&device);
         move || loop {
             device.poll(wgpu::Maintain::Wait);
         }
     });
+    let identity_src = wgpu::ShaderSource::Wgsl(U32_IDENTITY_WGSL.into());
 
     let input_seq: [u32; 3] = [0, 1, 2];
     let mut output_seq = [0, 0, 0];
-    compute(&device, &queue, identity_src, &input_seq, &mut output_seq).await;
+    compute(
+        &device,
+        &queue,
+        identity_src,
+        &0,
+        &input_seq,
+        &mut output_seq,
+    )
+    .await;
     assert_eq!(input_seq, output_seq);
 }
