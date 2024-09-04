@@ -9,6 +9,7 @@ use winit::{
 
 use crate::{gpu::instance, view::View};
 
+#[derive(Debug)]
 pub struct App {
     view: Option<View>,
 }
@@ -48,7 +49,7 @@ impl ApplicationHandler for App {
             }
             WindowEvent::RedrawRequested => {
                 tracing::info!("redraw requested");
-                self.view.as_ref().unwrap().draw().unwrap();
+                self.view.as_ref().unwrap().draw(&mut |_, _| {}).unwrap();
             }
             WindowEvent::Resized(size) => {
                 self.view.as_mut().unwrap().resize(size);

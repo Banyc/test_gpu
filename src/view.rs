@@ -4,6 +4,7 @@ use anyhow::Context;
 
 use crate::gpu::{adapter, device};
 
+#[derive(Debug)]
 pub struct View {
     window: Arc<winit::window::Window>,
     surface: wgpu::Surface<'static>,
@@ -44,12 +45,16 @@ impl View {
         self.surface.configure(&self.device, &config);
     }
 
-    pub fn draw(&self) -> anyhow::Result<()> {
+    pub fn draw(
+        &self,
+        draw: &mut impl FnMut(&mut wgpu::CommandEncoder, wgpu::TextureView),
+    ) -> anyhow::Result<()> {
         let frame = self.surface.get_current_texture()?;
         let desc = wgpu::TextureViewDescriptor::default();
         let view = frame.texture.create_view(&desc);
         let desc = wgpu::CommandEncoderDescriptor { label: None };
         let mut command = self.device.create_command_encoder(&desc);
+        draw(&mut command, view);
         self.queue.submit([command.finish()]);
         Ok(())
     }
