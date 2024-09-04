@@ -1,20 +1,7 @@
 use wgpu::util::DeviceExt;
 
-pub struct GpuDraw<'a> {
-    surface: wgpu::Surface<'a>,
-    device: wgpu::Device,
-}
-
 pub fn instance() -> wgpu::Instance {
     wgpu::Instance::default()
-}
-/// draw board
-pub fn surface<'a>(
-    instance: &wgpu::Instance,
-    window: &'a impl wgpu::WindowHandle,
-) -> anyhow::Result<wgpu::Surface<'a>> {
-    let surface = instance.create_surface(window)?;
-    Ok(surface)
 }
 /// handle to graphics card
 pub async fn adapter(

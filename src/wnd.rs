@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
@@ -5,12 +7,14 @@ use winit::{
     window::{Window, WindowId},
 };
 
+use crate::{gpu::instance, view::View};
+
 pub struct App {
-    window: Option<Window>,
+    view: Option<View>,
 }
 impl App {
     pub fn new() -> Self {
-        Self { window: None }
+        Self { view: None }
     }
 }
 impl Default for App {
@@ -21,17 +25,20 @@ impl Default for App {
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         tracing::info!("resumed");
-        self.window = Some(
-            event_loop
-                .create_window(Window::default_attributes())
-                .unwrap(),
-        );
+        let window = event_loop
+            .create_window(Window::default_attributes())
+            .unwrap();
+        let window = Arc::new(window);
+        let instance = instance();
+        let view = View::new(window, &instance);
+        let view = pollster::block_on(view).unwrap();
+        self.view = Some(view);
     }
 
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,
-        window_id: WindowId,
+        _window_id: WindowId,
         event: WindowEvent,
     ) {
         match event {
@@ -41,6 +48,11 @@ impl ApplicationHandler for App {
             }
             WindowEvent::RedrawRequested => {
                 tracing::info!("redraw requested");
+                self.view.as_ref().unwrap().draw().unwrap();
+            }
+            WindowEvent::Resized(size) => {
+                self.view.as_mut().unwrap().resize(size);
+                self.view.as_ref().unwrap().window().request_redraw();
             }
             _ => (),
         }
