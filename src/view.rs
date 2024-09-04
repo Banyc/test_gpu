@@ -56,6 +56,7 @@ impl View {
         let mut command = self.device.create_command_encoder(&desc);
         draw(&mut command, view);
         self.queue.submit([command.finish()]);
+        frame.present();
         Ok(())
     }
 }
