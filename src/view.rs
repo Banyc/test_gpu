@@ -11,23 +11,32 @@ pub struct View {
     adapter: wgpu::Adapter,
     device: wgpu::Device,
     queue: wgpu::Queue,
+    draw: Box<dyn Draw>,
 }
 impl View {
     pub async fn new(
         window: Arc<winit::window::Window>,
         instance: &wgpu::Instance,
+        mut draw: Box<dyn Draw>,
     ) -> anyhow::Result<Self> {
         let surface = instance.create_surface(window.clone())?;
         let adapter = adapter(instance, Some(&surface))
             .await
             .context("no adapter")?;
         let (device, queue) = device(&adapter).await?;
+        let args = InitArgs {
+            device: &device,
+            surface: &surface,
+            adapter: &adapter,
+        };
+        draw.init(args);
         Ok(Self {
             window,
             surface,
             adapter,
             device,
             queue,
+            draw,
         })
     }
 
@@ -45,18 +54,39 @@ impl View {
         self.surface.configure(&self.device, &config);
     }
 
-    pub fn draw(
-        &self,
-        draw: &mut impl FnMut(&mut wgpu::CommandEncoder, wgpu::TextureView),
-    ) -> anyhow::Result<()> {
+    pub fn draw(&mut self) -> anyhow::Result<()> {
         let frame = self.surface.get_current_texture()?;
         let desc = wgpu::TextureViewDescriptor::default();
         let view = frame.texture.create_view(&desc);
         let desc = wgpu::CommandEncoderDescriptor { label: None };
         let mut command = self.device.create_command_encoder(&desc);
-        draw(&mut command, view);
+        let args = DrawArgs {
+            command: &mut command,
+            view,
+            device: &self.device,
+        };
+        self.draw.draw(args);
         self.queue.submit([command.finish()]);
         frame.present();
         Ok(())
     }
+}
+
+#[derive(Debug)]
+pub struct InitArgs<'a> {
+    pub device: &'a wgpu::Device,
+    pub surface: &'a wgpu::Surface<'a>,
+    pub adapter: &'a wgpu::Adapter,
+}
+
+#[derive(Debug)]
+pub struct DrawArgs<'a> {
+    pub command: &'a mut wgpu::CommandEncoder,
+    pub view: wgpu::TextureView,
+    pub device: &'a wgpu::Device,
+}
+
+pub trait Draw: core::fmt::Debug + Sync + Send {
+    fn init(&mut self, args: InitArgs<'_>);
+    fn draw(&mut self, args: DrawArgs<'_>);
 }

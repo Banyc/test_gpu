@@ -7,7 +7,7 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::{gpu::instance, view::View};
+use crate::{gpu::instance, triangle::DrawTriangle, view::View};
 
 #[derive(Debug)]
 pub struct App {
@@ -31,7 +31,8 @@ impl ApplicationHandler for App {
             .unwrap();
         let window = Arc::new(window);
         let instance = instance();
-        let view = View::new(window, &instance);
+        let draw = DrawTriangle::new();
+        let view = View::new(window, &instance, Box::new(draw));
         let view = pollster::block_on(view).unwrap();
         self.view = Some(view);
     }
@@ -49,7 +50,7 @@ impl ApplicationHandler for App {
             }
             WindowEvent::RedrawRequested => {
                 tracing::info!("redraw requested");
-                self.view.as_ref().unwrap().draw(&mut |_, _| {}).unwrap();
+                self.view.as_mut().unwrap().draw().unwrap();
             }
             WindowEvent::Resized(size) => {
                 self.view.as_mut().unwrap().resize(size);
