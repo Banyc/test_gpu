@@ -7,23 +7,25 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::{gpu::instance, triangle::DrawTriangle, view::View};
+use crate::{
+    gpu::instance,
+    view::{Draw, View},
+};
 
 #[derive(Debug)]
-pub struct App {
+pub struct Wnd {
+    draw: Option<Box<dyn Draw>>,
     view: Option<View>,
 }
-impl App {
-    pub fn new() -> Self {
-        Self { view: None }
+impl Wnd {
+    pub fn new(draw: Box<dyn Draw>) -> Self {
+        Self {
+            view: None,
+            draw: Some(draw),
+        }
     }
 }
-impl Default for App {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl ApplicationHandler for App {
+impl ApplicationHandler for Wnd {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         tracing::info!("resumed");
         let window = event_loop
@@ -31,8 +33,7 @@ impl ApplicationHandler for App {
             .unwrap();
         let window = Arc::new(window);
         let instance = instance();
-        let draw = DrawTriangle::new();
-        let view = View::new(window, &instance, Box::new(draw));
+        let view = View::new(window, &instance, self.draw.take().unwrap());
         let view = pollster::block_on(view).unwrap();
         self.view = Some(view);
     }
