@@ -1,7 +1,5 @@
 use wgpu::util::DeviceExt;
 
-pub const U32_IDENTITY_WGSL: &str = include_str!("u32_identity.wgsl");
-
 pub async fn compute<I, G, O>(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
@@ -113,10 +111,9 @@ pub async fn compute<I, G, O>(
 async fn test_compute() {
     use std::sync::Arc;
 
-    use crate::{
-        compute::U32_IDENTITY_WGSL,
-        gpu::{adapter, device, instance},
-    };
+    use crate::gpu::{adapter, device, instance};
+
+    const U32_IDENTITY_WGSL: &str = include_str!("u32_identity.wgsl");
 
     let instance = instance();
     let adapter = adapter(&instance, None).await.unwrap();
