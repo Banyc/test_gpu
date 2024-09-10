@@ -44,8 +44,10 @@ impl Draw for DrawTriangle {
         let pipeline = self.pipeline.as_ref().unwrap();
         let vertex_buffer = pipeline.vertex_buffer.slice(..);
         pass.set_vertex_buffer(0, vertex_buffer);
+        let index_buffer = pipeline.index_buffer.slice(..);
+        pass.set_index_buffer(index_buffer, wgpu::IndexFormat::Uint32);
         pass.set_pipeline(pipeline.pipeline());
-        pass.draw(0..pipeline.vertex_count, 0..1);
+        pass.draw_indexed(0..pipeline.index_count, 0, 0..1);
     }
 }
 
@@ -53,7 +55,8 @@ impl Draw for DrawTriangle {
 struct Pipeline {
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
-    vertex_count: u32,
+    index_buffer: wgpu::Buffer,
+    index_count: u32,
 }
 impl Pipeline {
     pub fn new(args: InitArgs<'_>) -> Self {
@@ -74,23 +77,20 @@ impl Pipeline {
             compilation_options: Default::default(),
             buffers: &[vertex_buffer],
         };
-        let vertices = vec![
-            VertexAttributes {
-                position: [-1., -1., 0.],
-            },
-            VertexAttributes {
-                position: [0., 1., 0.],
-            },
-            VertexAttributes {
-                position: [1., -1., 0.],
-            },
-        ];
+        // let mesh = triangle();
+        let mesh = rectangle();
         let desc = wgpu::util::BufferInitDescriptor {
             label: Some("vertices"),
-            contents: bytemuck::cast_slice(&vertices),
+            contents: bytemuck::cast_slice(&mesh.vertices),
             usage: wgpu::BufferUsages::VERTEX,
         };
         let vertex_buffer = args.device.create_buffer_init(&desc);
+        let desc = wgpu::util::BufferInitDescriptor {
+            label: Some("indices"),
+            contents: bytemuck::cast_slice(&mesh.indices),
+            usage: wgpu::BufferUsages::INDEX,
+        };
+        let index_buffer = args.device.create_buffer_init(&desc);
         let swap_chain = args.surface.get_capabilities(args.adapter);
         let swap_chain = swap_chain.formats[0];
         let fragment = wgpu::FragmentState {
@@ -120,7 +120,8 @@ impl Pipeline {
         Self {
             pipeline,
             vertex_buffer,
-            vertex_count: vertices.len() as u32,
+            index_buffer,
+            index_count: mesh.indices.len() as u32,
         }
     }
     pub fn pipeline(&self) -> &wgpu::RenderPipeline {
@@ -132,4 +133,49 @@ impl Pipeline {
 #[repr(C)]
 struct VertexAttributes {
     pub position: [f32; 3],
+}
+
+struct Mesh {
+    pub vertices: Vec<VertexAttributes>,
+    pub indices: Vec<u32>,
+}
+
+#[allow(unused)]
+fn triangle() -> Mesh {
+    let vertices = vec![
+        VertexAttributes {
+            position: [-1., -1., 0.],
+        },
+        VertexAttributes {
+            position: [0., 1., 0.],
+        },
+        VertexAttributes {
+            position: [1., -1., 0.],
+        },
+    ];
+    let indices = vec![0, 1, 2];
+    Mesh { vertices, indices }
+}
+
+#[allow(unused)]
+fn rectangle() -> Mesh {
+    let vertices = vec![
+        VertexAttributes {
+            position: [0.5, 0.5, 0.],
+        },
+        VertexAttributes {
+            position: [0.5, -0.5, 0.],
+        },
+        VertexAttributes {
+            position: [-0.5, 0.5, 0.],
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, 0.],
+        },
+    ];
+    let indices = vec![
+        0, 1, 2, //
+        1, 3, 2,
+    ];
+    Mesh { vertices, indices }
 }
