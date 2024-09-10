@@ -1,5 +1,6 @@
 struct Vertex {
     @builtin(vertex_index) index: u32,
+    @location(0) position: vec3<f32>,
 }
 
 struct Fragment {
@@ -12,10 +13,13 @@ struct Color {
 
 @vertex
 fn vs_main(vertex: Vertex) -> Fragment {
-    let x = f32(i32(vertex.index) - 1);
-    let y = f32(i32(vertex.index & 1u) * 2 - 1);
+    // let x = f32(i32(vertex.index) - 1);
+    // let y = f32(i32(vertex.index & 1u) * 2 - 1);
+    // var fragment = Fragment();
+    // fragment.position = vec4<f32>(x, y, 0.0, 1.0);
+
     var fragment = Fragment();
-    fragment.position = vec4<f32>(x, y, 0.0, 1.0);
+    fragment.position = vec4<f32>(vertex.position, 1.0);
     return fragment;
 }
 
