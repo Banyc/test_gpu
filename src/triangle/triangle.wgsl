@@ -4,16 +4,24 @@ struct Uniform {
 @group(0)
 @binding(0)
 var<uniform> uniform: Uniform;
+@group(0)
+@binding(1)
+var texture: texture_2d<f32>;
+@group(0)
+@binding(2)
+var sampl: sampler;
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
     @location(0) position: vec3<f32>,
     @location(1) color: vec3<f32>,
+    @location(2) tex_coord: vec2<f32>,
 }
 
 struct Fragment {
     @builtin(position) position: vec4<f32>,
     @location(0) color: vec3<f32>,
+    @location(1) tex_coord: vec2<f32>,
 }
 
 struct Color {
@@ -30,13 +38,20 @@ fn vs_main(vertex: Vertex) -> Fragment {
     var fragment = Fragment();
     fragment.position = vec4<f32>(vertex.position, 1.0);
     fragment.color = vertex.color;
+    fragment.tex_coord = vertex.tex_coord;
     return fragment;
 }
 
 @fragment
 fn fs_main(fragment: Fragment) -> Color {
+    // var color = Color();
+    // color.color[1] = uniform.green;
+    // return color;
+
+    var solid_color = vec4<f32>(fragment.color, 1.0);
+    solid_color[1] = uniform.green;
+    let tex_color = textureSample(texture, sampl, fragment.tex_coord);
     var color = Color();
-    color.color = vec4<f32>(fragment.color, 1.0);
-    color.color[1] = uniform.green;
+    color.color = solid_color * tex_color;
     return color;
 }

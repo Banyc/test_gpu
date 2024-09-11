@@ -28,6 +28,7 @@ impl View {
             device: &device,
             surface: &surface,
             adapter: &adapter,
+            queue: &queue,
         };
         draw.init(args);
         Ok(Self {
@@ -78,6 +79,7 @@ pub struct InitArgs<'a> {
     pub device: &'a wgpu::Device,
     pub surface: &'a wgpu::Surface<'a>,
     pub adapter: &'a wgpu::Adapter,
+    pub queue: &'a wgpu::Queue,
 }
 
 #[derive(Debug)]
