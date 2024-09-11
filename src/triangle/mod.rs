@@ -1,10 +1,17 @@
+use std::{
+    f32::consts::PI,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use bytemuck_derive::{Pod, Zeroable};
+use num_traits::Float;
 use wgpu::util::DeviceExt;
 
 use crate::view::{Draw, DrawArgs, InitArgs};
 
 const SHADER: &str = include_str!("triangle.wgsl");
-const IS_WIREFRAME: bool = true;
+const IS_WIREFRAME: bool = false;
+const PER_PERIOD: usize = 2 << 10;
 
 #[derive(Debug)]
 pub struct DrawTriangle {
@@ -26,6 +33,7 @@ impl Draw for DrawTriangle {
     }
 
     fn draw(&mut self, args: DrawArgs<'_>) {
+        let pipeline = self.pipeline.as_ref().unwrap();
         let gray = wgpu::Color {
             r: 0.2,
             g: 0.3,
@@ -40,6 +48,20 @@ impl Draw for DrawTriangle {
                 store: wgpu::StoreOp::Store,
             },
         };
+        let green = normalize_neg_pos_1(f32::sin(
+            (SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+                % (PER_PERIOD as u128)) as f32
+                * 2.
+                * PI
+                / PER_PERIOD as f32,
+        ));
+        dbg!(green);
+        let uniform = Uniform { green };
+        args.queue
+            .write_buffer(&pipeline.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
         let desc = wgpu::RenderPassDescriptor {
             label: None,
             color_attachments: &[Some(background)],
@@ -48,12 +70,12 @@ impl Draw for DrawTriangle {
             occlusion_query_set: None,
         };
         let mut pass = args.command.begin_render_pass(&desc);
-        let pipeline = self.pipeline.as_ref().unwrap();
         let vertex_buffer = pipeline.vertex_buffer.slice(..);
         pass.set_vertex_buffer(0, vertex_buffer);
         let index_buffer = pipeline.index_buffer.slice(..);
         pass.set_index_buffer(index_buffer, wgpu::IndexFormat::Uint32);
         pass.set_pipeline(pipeline.pipeline());
+        pass.set_bind_group(0, &pipeline.bind_group, &[]);
         pass.draw_indexed(0..pipeline.index_count, 0, 0..1);
     }
 }
@@ -64,6 +86,8 @@ struct Pipeline {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     index_count: u32,
+    uniform_buffer: wgpu::Buffer,
+    bind_group: wgpu::BindGroup,
 }
 impl Pipeline {
     pub fn new(args: InitArgs<'_>) -> Self {
@@ -106,9 +130,23 @@ impl Pipeline {
             compilation_options: Default::default(),
             targets: &[Some(swap_chain.into())],
         };
+        let desc = wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::all(),
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        };
+        let bind_group = args.device.create_bind_group_layout(&desc);
         let desc = wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[],
+            bind_group_layouts: &[&bind_group],
             push_constant_ranges: &[],
         };
         let layout = args.device.create_pipeline_layout(&desc);
@@ -131,17 +169,44 @@ impl Pipeline {
             multiview: None,
             cache: None,
         };
+        println!("0");
         let pipeline = args.device.create_render_pipeline(&desc);
+        println!("1");
+        let layout = pipeline.get_bind_group_layout(0);
+        let desc = wgpu::BufferDescriptor {
+            label: Some("uniform"),
+            size: core::mem::size_of::<Uniform>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        };
+        let uniform_buffer = args.device.create_buffer(&desc);
+        let desc = wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: uniform_buffer.as_entire_binding(),
+            }],
+        };
+        let bind_group = args.device.create_bind_group(&desc);
         Self {
             pipeline,
             vertex_buffer,
             index_buffer,
             index_count: mesh.indices.len() as u32,
+            uniform_buffer,
+            bind_group,
         }
     }
     pub fn pipeline(&self) -> &wgpu::RenderPipeline {
         &self.pipeline
     }
+}
+
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+#[repr(C)]
+struct Uniform {
+    pub green: f32,
 }
 
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
@@ -214,4 +279,10 @@ fn quad_indices(vertex_pos: QuadVertexPos) -> [u32; 6] {
         vertex_pos.bottom_left,
         vertex_pos.top_left,
     ]
+}
+
+fn normalize_neg_pos_1<T: Float>(v: T) -> T {
+    let one = T::from(1.).unwrap();
+    let two = T::from(2.).unwrap();
+    (v + one) / two
 }

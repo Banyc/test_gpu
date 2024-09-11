@@ -64,6 +64,7 @@ impl View {
             command: &mut command,
             view,
             device: &self.device,
+            queue: &self.queue,
         };
         self.draw.draw(args);
         self.queue.submit([command.finish()]);
@@ -84,6 +85,7 @@ pub struct DrawArgs<'a> {
     pub command: &'a mut wgpu::CommandEncoder,
     pub view: wgpu::TextureView,
     pub device: &'a wgpu::Device,
+    pub queue: &'a wgpu::Queue,
 }
 
 pub trait Draw: core::fmt::Debug + Sync + Send {
