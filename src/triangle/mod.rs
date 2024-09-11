@@ -26,17 +26,23 @@ impl Draw for DrawTriangle {
     }
 
     fn draw(&mut self, args: DrawArgs<'_>) {
-        let color = wgpu::RenderPassColorAttachment {
+        let gray = wgpu::Color {
+            r: 0.2,
+            g: 0.3,
+            b: 0.3,
+            a: 1.0,
+        };
+        let background = wgpu::RenderPassColorAttachment {
             view: &args.view,
             resolve_target: None,
             ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
+                load: wgpu::LoadOp::Clear(gray),
                 store: wgpu::StoreOp::Store,
             },
         };
         let desc = wgpu::RenderPassDescriptor {
             label: None,
-            color_attachments: &[Some(color)],
+            color_attachments: &[Some(background)],
             depth_stencil_attachment: None,
             timestamp_writes: None,
             occlusion_query_set: None,

@@ -26,6 +26,6 @@ fn vs_main(vertex: Vertex) -> Fragment {
 @fragment
 fn fs_main(fragment: Fragment) -> Color {
     var color = Color();
-    color.color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
+    color.color = vec4<f32>(1.0, 0.5, 0.2, 1.0);
     return color;
 }
