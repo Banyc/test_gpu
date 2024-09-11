@@ -4,6 +4,7 @@ use wgpu::util::DeviceExt;
 use crate::view::{Draw, DrawArgs, InitArgs};
 
 const SHADER: &str = include_str!("triangle.wgsl");
+const IS_WIREFRAME: bool = true;
 
 #[derive(Debug)]
 pub struct DrawTriangle {
@@ -105,11 +106,19 @@ impl Pipeline {
             push_constant_ranges: &[],
         };
         let layout = args.device.create_pipeline_layout(&desc);
+        let polygon_mode = if IS_WIREFRAME {
+            wgpu::PolygonMode::Line
+        } else {
+            wgpu::PolygonMode::default()
+        };
         let desc = wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&layout),
             vertex,
-            primitive: wgpu::PrimitiveState::default(),
+            primitive: wgpu::PrimitiveState {
+                polygon_mode,
+                ..Default::default()
+            },
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(fragment),
@@ -173,9 +182,30 @@ fn rectangle() -> Mesh {
             position: [-0.5, -0.5, 0.],
         },
     ];
-    let indices = vec![
-        0, 1, 2, //
-        1, 3, 2,
-    ];
+    let vertex_pos = QuadVertexPos {
+        top_right: 0,
+        bottom_right: 1,
+        top_left: 2,
+        bottom_left: 3,
+    };
+    let indices = quad_indices(vertex_pos).into();
     Mesh { vertices, indices }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct QuadVertexPos {
+    pub top_right: u32,
+    pub bottom_right: u32,
+    pub top_left: u32,
+    pub bottom_left: u32,
+}
+fn quad_indices(vertex_pos: QuadVertexPos) -> [u32; 6] {
+    [
+        vertex_pos.top_right,
+        vertex_pos.bottom_right,
+        vertex_pos.top_left, //
+        vertex_pos.bottom_right,
+        vertex_pos.bottom_left,
+        vertex_pos.top_left,
+    ]
 }

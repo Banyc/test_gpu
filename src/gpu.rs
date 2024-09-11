@@ -22,7 +22,7 @@ pub async fn device(adapter: &wgpu::Adapter) -> anyhow::Result<(wgpu::Device, wg
     let trace_path = None;
     let desc = wgpu::DeviceDescriptor {
         label: None,
-        required_features: wgpu::Features::empty(),
+        required_features: wgpu::Features::empty() | wgpu::Features::POLYGON_MODE_LINE,
         required_limits: wgpu::Limits::downlevel_defaults(),
         memory_hints: wgpu::MemoryHints::Performance,
     };
