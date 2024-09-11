@@ -100,7 +100,7 @@ impl Pipeline {
         let vertex_buffer = wgpu::VertexBufferLayout {
             array_stride: core::mem::size_of::<VertexAttributes>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &wgpu::vertex_attr_array![0 => Float32x3],
+            attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3],
         };
         let vertex = wgpu::VertexState {
             module: &shader,
@@ -108,8 +108,8 @@ impl Pipeline {
             compilation_options: Default::default(),
             buffers: &[vertex_buffer],
         };
-        // let mesh = triangle();
-        let mesh = rectangle();
+        let mesh = triangle();
+        // let mesh = rectangle();
         let desc = wgpu::util::BufferInitDescriptor {
             label: Some("vertices"),
             contents: bytemuck::cast_slice(&mesh.vertices),
@@ -169,9 +169,7 @@ impl Pipeline {
             multiview: None,
             cache: None,
         };
-        println!("0");
         let pipeline = args.device.create_render_pipeline(&desc);
-        println!("1");
         let layout = pipeline.get_bind_group_layout(0);
         let desc = wgpu::BufferDescriptor {
             label: Some("uniform"),
@@ -213,6 +211,7 @@ struct Uniform {
 #[repr(C)]
 struct VertexAttributes {
     pub position: [f32; 3],
+    pub color: [f32; 3],
 }
 
 struct Mesh {
@@ -225,12 +224,15 @@ fn triangle() -> Mesh {
     let vertices = vec![
         VertexAttributes {
             position: [-1., -1., 0.],
+            color: [1., 0., 0.],
         },
         VertexAttributes {
             position: [0., 1., 0.],
+            color: [0., 1., 0.],
         },
         VertexAttributes {
             position: [1., -1., 0.],
+            color: [0., 0., 1.],
         },
     ];
     let indices = vec![0, 1, 2];
@@ -239,18 +241,23 @@ fn triangle() -> Mesh {
 
 #[allow(unused)]
 fn rectangle() -> Mesh {
+    let color = [1.0, 0.5, 0.2];
     let vertices = vec![
         VertexAttributes {
             position: [0.5, 0.5, 0.],
+            color,
         },
         VertexAttributes {
             position: [0.5, -0.5, 0.],
+            color,
         },
         VertexAttributes {
             position: [-0.5, 0.5, 0.],
+            color,
         },
         VertexAttributes {
             position: [-0.5, -0.5, 0.],
+            color,
         },
     ];
     let vertex_pos = QuadVertexPos {

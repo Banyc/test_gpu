@@ -8,10 +8,12 @@ var<uniform> uniform: Uniform;
 struct Vertex {
     @builtin(vertex_index) index: u32,
     @location(0) position: vec3<f32>,
+    @location(1) color: vec3<f32>,
 }
 
 struct Fragment {
     @builtin(position) position: vec4<f32>,
+    @location(0) color: vec3<f32>,
 }
 
 struct Color {
@@ -27,13 +29,14 @@ fn vs_main(vertex: Vertex) -> Fragment {
 
     var fragment = Fragment();
     fragment.position = vec4<f32>(vertex.position, 1.0);
+    fragment.color = vertex.color;
     return fragment;
 }
 
 @fragment
 fn fs_main(fragment: Fragment) -> Color {
     var color = Color();
-    let green = uniform.green;
-    color.color = vec4<f32>(1.0, green, 0.2, 1.0);
+    color.color = vec4<f32>(fragment.color, 1.0);
+    color.color[1] = uniform.green;
     return color;
 }
