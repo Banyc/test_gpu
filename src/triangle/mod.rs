@@ -36,49 +36,7 @@ impl Draw for DrawTriangle {
 
     fn draw(&mut self, args: DrawArgs<'_>) {
         let pipeline = self.pipeline.as_ref().unwrap();
-        let gray = wgpu::Color {
-            r: 0.2,
-            g: 0.3,
-            b: 0.3,
-            a: 1.0,
-        };
-        let background = wgpu::RenderPassColorAttachment {
-            view: &args.view,
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(gray),
-                store: wgpu::StoreOp::Store,
-            },
-        };
-        let green = normalize_neg_pos_1(f32::sin(
-            (SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis()
-                % (PER_PERIOD as u128)) as f32
-                * 2.
-                * PI
-                / PER_PERIOD as f32,
-        ));
-        dbg!(green);
-        let uniform = Uniform { green };
-        args.queue
-            .write_buffer(&pipeline.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
-        let desc = wgpu::RenderPassDescriptor {
-            label: None,
-            color_attachments: &[Some(background)],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-        };
-        let mut pass = args.command.begin_render_pass(&desc);
-        let vertex_buffer = pipeline.vertex_buffer.slice(..);
-        pass.set_vertex_buffer(0, vertex_buffer);
-        let index_buffer = pipeline.index_buffer.slice(..);
-        pass.set_index_buffer(index_buffer, wgpu::IndexFormat::Uint32);
-        pass.set_pipeline(pipeline.pipeline());
-        pass.set_bind_group(0, &pipeline.bind_group, &[]);
-        pass.draw_indexed(0..pipeline.index_count, 0, 0..1);
+        pipeline.draw(args);
     }
 }
 
@@ -255,8 +213,51 @@ impl Pipeline {
             bind_group,
         }
     }
-    pub fn pipeline(&self) -> &wgpu::RenderPipeline {
-        &self.pipeline
+
+    pub fn draw(&self, args: DrawArgs<'_>) {
+        let gray = wgpu::Color {
+            r: 0.2,
+            g: 0.3,
+            b: 0.3,
+            a: 1.0,
+        };
+        let background = wgpu::RenderPassColorAttachment {
+            view: &args.view,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(gray),
+                store: wgpu::StoreOp::Store,
+            },
+        };
+        let green = normalize_neg_pos_1(f32::sin(
+            (SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+                % (PER_PERIOD as u128)) as f32
+                * 2.
+                * PI
+                / PER_PERIOD as f32,
+        ));
+        dbg!(green);
+        let uniform = Uniform { green };
+        args.queue
+            .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
+        let desc = wgpu::RenderPassDescriptor {
+            label: None,
+            color_attachments: &[Some(background)],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+        };
+        let mut pass = args.command.begin_render_pass(&desc);
+        let vertex_buffer = self.vertex_buffer.slice(..);
+        pass.set_vertex_buffer(0, vertex_buffer);
+        let index_buffer = self.index_buffer.slice(..);
+        pass.set_index_buffer(index_buffer, wgpu::IndexFormat::Uint32);
+        pass.set_pipeline(&self.pipeline);
+        pass.set_bind_group(0, &self.bind_group, &[]);
+        pass.draw_indexed(0..self.index_count, 0, 0..1);
     }
 }
 
