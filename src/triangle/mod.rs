@@ -1,5 +1,5 @@
 use std::{
-    f32::consts::PI,
+    f64::consts::PI,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -7,7 +7,10 @@ use bytemuck_derive::{Pod, Zeroable};
 use num_traits::Float;
 use wgpu::util::DeviceExt;
 
-use crate::view::{Draw, DrawArgs, InitArgs};
+use crate::{
+    transform::{matrix_mul, rotate, translate},
+    view::{Draw, DrawArgs, InitArgs},
+};
 
 const SHADER: &str = include_str!("triangle.wgsl");
 const WALL: &[u8] = include_bytes!("wall.jpg");
@@ -197,18 +200,29 @@ impl Pipeline {
                 store: wgpu::StoreOp::Store,
             },
         };
-        let green = normalize_neg_pos_1(f32::sin(
+        let sin = normalize_neg_pos_1(f64::sin(
             (SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_millis()
-                % (PER_PERIOD as u128)) as f32
+                % (PER_PERIOD as u128)) as f64
                 * 2.
                 * PI
-                / PER_PERIOD as f32,
+                / PER_PERIOD as f64,
         ));
-        dbg!(green);
-        let uniform = Uniform { green };
+        dbg!(sin);
+        let trans = {
+            let translate = translate([0.5, -0.5, 0.0]);
+            let angle = sin * PI * 2.;
+            let rotate = rotate([0.0, 0.0, 1.0], angle);
+            matrix_mul(&rotate, &translate)
+        };
+        dbg!(&trans);
+        let uniform = Uniform {
+            transform: trans.transpose().into_buffer().map(|x| x as f32),
+            _padding: [0; 3],
+            sin: sin as f32,
+        };
         args.queue
             .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
         let desc = wgpu::RenderPassDescriptor {
@@ -232,7 +246,9 @@ impl Pipeline {
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
 struct Uniform {
-    pub green: f32,
+    pub transform: [f32; 16],
+    pub _padding: [u32; 3],
+    pub sin: f32,
 }
 
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]

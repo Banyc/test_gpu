@@ -1,7 +1,7 @@
 use std::num::NonZeroUsize;
 
 use math::{
-    matrix::{ArrayMatrixBuf, Size},
+    matrix::{ArrayMatrixBuf, Matrix, Size, VecMatrixBuf},
     vector::Vector,
 };
 use strict_num::FiniteF64;
@@ -29,6 +29,11 @@ pub fn point(var: [f64; 3]) -> Point {
 
 pub fn zero() -> TransformMatrix {
     let data = [0.; 16];
+    TransformMatrix::new(transform_size(), data)
+}
+pub fn identity() -> TransformMatrix {
+    let m = VecMatrixBuf::identity(transform_size().rows);
+    let data = m.into_buffer().try_into().unwrap();
     TransformMatrix::new(transform_size(), data)
 }
 pub fn scale(var: [f64; 3]) -> TransformMatrix {
@@ -78,19 +83,21 @@ pub fn rotate(axises: [f64; 3], angle: f64) -> TransformMatrix {
     ];
     TransformMatrix::new(transform_size(), data)
 }
+pub fn matrix_mul(left: &TransformMatrix, right: &TransformMatrix) -> TransformMatrix {
+    let mut out = zero();
+    left.mul_matrix_in(right, &mut out);
+    out
+}
 
 #[cfg(test)]
 mod tests {
-    use math::matrix::Matrix;
-
     use super::*;
 
     #[test]
     fn test_transform() {
         let trans = translate([1., 2., 3.]);
         let scale = scale([2., 2., 2.]);
-        let mut m = zero();
-        trans.mul_matrix_in(&scale, &mut m);
+        let m = matrix_mul(&trans, &scale);
         let expected = TransformMatrix::new(
             transform_size(),
             [

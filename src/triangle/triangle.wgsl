@@ -1,5 +1,7 @@
 struct Uniform {
-    green: f32,
+    transform: mat4x4<f32>,
+    padding: vec3<u32>,
+    sin: f32,
 }
 @group(0)
 @binding(0)
@@ -35,8 +37,11 @@ fn vs_main(vertex: Vertex) -> Fragment {
     // var fragment = Fragment();
     // fragment.position = vec4<f32>(x, y, 0.0, 1.0);
 
+    let pos = uniform.transform * vec4<f32>(vertex.position, 1.0);
+    // let pos = vec4<f32>(vertex.position, 1.0);
+
     var fragment = Fragment();
-    fragment.position = vec4<f32>(vertex.position, 1.0);
+    fragment.position = pos;
     fragment.color = vertex.color;
     fragment.tex_coord = vertex.tex_coord;
     return fragment;
@@ -45,11 +50,11 @@ fn vs_main(vertex: Vertex) -> Fragment {
 @fragment
 fn fs_main(fragment: Fragment) -> Color {
     // var color = Color();
-    // color.color[1] = uniform.green;
+    // color.color[1] = uniform.sin;
     // return color;
 
     var solid_color = vec4<f32>(fragment.color, 1.0);
-    solid_color[1] = uniform.green;
+    solid_color[1] = uniform.sin;
     let tex_color = textureSample(texture, sampl, fragment.tex_coord);
     var color = Color();
     color.color = solid_color * tex_color;
