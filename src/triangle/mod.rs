@@ -94,9 +94,15 @@ impl Pipeline {
             compilation_options: Default::default(),
             targets: &[Some(swap_chain.into())],
         };
-        let desc = wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            entries: &[
+        let desc = wgpu::BufferDescriptor {
+            label: Some("uniform"),
+            size: core::mem::size_of::<Uniform>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        };
+        let uniform_buffer = args.device.create_buffer(&desc);
+        let bind_group_bindings = [
+            (
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStages::all(),
@@ -107,19 +113,42 @@ impl Pipeline {
                     },
                     count: None,
                 },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: uniform_buffer.as_entire_binding(),
+                },
+            ),
+            (
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: texture.texture_layout(),
                     count: None,
                 },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(texture.view()),
+                },
+            ),
+            (
                 wgpu::BindGroupLayoutEntry {
                     binding: 2,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: texture.sampler_layout(),
                     count: None,
                 },
-            ],
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(texture.sampler()),
+                },
+            ),
+        ];
+        let desc = wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &bind_group_bindings
+                .iter()
+                .map(|(x, _)| *x)
+                .collect::<Vec<_>>(),
         };
         let bind_group = args.device.create_bind_group_layout(&desc);
         let desc = wgpu::PipelineLayoutDescriptor {
@@ -149,30 +178,13 @@ impl Pipeline {
         };
         let pipeline = args.device.create_render_pipeline(&desc);
         let layout = pipeline.get_bind_group_layout(0);
-        let desc = wgpu::BufferDescriptor {
-            label: Some("uniform"),
-            size: core::mem::size_of::<Uniform>() as wgpu::BufferAddress,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        };
-        let uniform_buffer = args.device.create_buffer(&desc);
         let desc = wgpu::BindGroupDescriptor {
             label: None,
             layout: &layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: uniform_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(texture.view()),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(texture.sampler()),
-                },
-            ],
+            entries: &bind_group_bindings
+                .iter()
+                .map(|(_, x)| x.clone())
+                .collect::<Vec<_>>(),
         };
         let bind_group = args.device.create_bind_group(&desc);
         Self {
