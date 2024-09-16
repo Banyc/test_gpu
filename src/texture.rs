@@ -112,7 +112,7 @@ impl DepthBuffer {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: Self::FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             view_formats: &[],
         };
         let texture = device.create_texture(&desc);
@@ -139,6 +139,16 @@ impl DepthBuffer {
             view: &self.view,
             depth_ops: Some(wgpu::Operations {
                 load: wgpu::LoadOp::Clear(1.),
+                store: wgpu::StoreOp::Store,
+            }),
+            stencil_ops: None,
+        }
+    }
+    pub fn attachment_load(&self) -> wgpu::RenderPassDepthStencilAttachment {
+        wgpu::RenderPassDepthStencilAttachment {
+            view: &self.view,
+            depth_ops: Some(wgpu::Operations {
+                load: wgpu::LoadOp::Load,
                 store: wgpu::StoreOp::Store,
             }),
             stencil_ops: None,

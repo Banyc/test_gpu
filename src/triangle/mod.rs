@@ -233,7 +233,7 @@ impl Draw for DrawTriangle {
             let desc = wgpu::RenderPassDescriptor {
                 label: None,
                 color_attachments: &[Some(background.clone())],
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(self.depth_buffer.attachment_clear()),
                 timestamp_writes: None,
                 occlusion_query_set: None,
             };
@@ -256,7 +256,7 @@ impl Draw for DrawTriangle {
         let models = model_positions.into_iter().map(translate);
         for (i, model_position) in models.enumerate() {
             // let model = rotate([1., 0., 0.], PI / 3.);
-            let rotate = rotate([1., 0.3, 0.5], i as f64 * 20. * PI / 180.);
+            let rotate = rotate([1., 0.3, 0.5], sin * i as f64 * 20. * PI / 180.);
             // let rotate = rotate([1., 0.3, 0.5], 0.);
             let model = model_position.mul_matrix_square(&rotate);
             let view = translate([0., 0., -3.]);
@@ -285,7 +285,7 @@ impl Draw for DrawTriangle {
                 let desc = wgpu::RenderPassDescriptor {
                     label: None,
                     color_attachments: &[Some(color)],
-                    depth_stencil_attachment: Some(self.depth_buffer.attachment_clear()),
+                    depth_stencil_attachment: Some(self.depth_buffer.attachment_load()),
                     timestamp_writes: None,
                     occlusion_query_set: None,
                 };
