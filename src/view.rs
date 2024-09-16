@@ -59,16 +59,12 @@ impl View {
         let frame = self.surface.get_current_texture()?;
         let desc = wgpu::TextureViewDescriptor::default();
         let view = frame.texture.create_view(&desc);
-        let desc = wgpu::CommandEncoderDescriptor { label: None };
-        let mut command = self.device.create_command_encoder(&desc);
         let args = DrawArgs {
-            command: &mut command,
             view,
             device: &self.device,
             queue: &self.queue,
         };
         self.draw.draw(args);
-        self.queue.submit([command.finish()]);
         frame.present();
         Ok(())
     }
@@ -84,7 +80,6 @@ pub struct InitArgs<'a> {
 
 #[derive(Debug)]
 pub struct DrawArgs<'a> {
-    pub command: &'a mut wgpu::CommandEncoder,
     pub view: wgpu::TextureView,
     pub device: &'a wgpu::Device,
     pub queue: &'a wgpu::Queue,

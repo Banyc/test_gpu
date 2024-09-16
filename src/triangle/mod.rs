@@ -242,21 +242,26 @@ impl Pipeline {
         };
         args.queue
             .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
-        let desc = wgpu::RenderPassDescriptor {
-            label: None,
-            color_attachments: &[Some(background)],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-        };
-        let mut pass = args.command.begin_render_pass(&desc);
-        let vertex_buffer = self.vertex_buffer.slice(..);
-        pass.set_vertex_buffer(0, vertex_buffer);
-        let index_buffer = self.index_buffer.slice(..);
-        pass.set_index_buffer(index_buffer, wgpu::IndexFormat::Uint32);
-        pass.set_pipeline(&self.pipeline);
-        pass.set_bind_group(0, &self.bind_group, &[]);
-        pass.draw_indexed(0..self.index_count, 0, 0..1);
+        let desc = wgpu::CommandEncoderDescriptor { label: None };
+        let mut command = args.device.create_command_encoder(&desc);
+        {
+            let desc = wgpu::RenderPassDescriptor {
+                label: None,
+                color_attachments: &[Some(background)],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            };
+            let mut pass = command.begin_render_pass(&desc);
+            let vertex_buffer = self.vertex_buffer.slice(..);
+            pass.set_vertex_buffer(0, vertex_buffer);
+            let index_buffer = self.index_buffer.slice(..);
+            pass.set_index_buffer(index_buffer, wgpu::IndexFormat::Uint32);
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &self.bind_group, &[]);
+            pass.draw_indexed(0..self.index_count, 0, 0..1);
+        }
+        args.queue.submit([command.finish()]);
     }
 }
 
