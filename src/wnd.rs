@@ -10,7 +10,7 @@ use winit::{
 
 use crate::{
     gpu::{adapter, device, instance},
-    DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, WndSize,
+    DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, ResizeArgs, WndSize,
 };
 
 #[derive(Debug)]
@@ -117,9 +117,13 @@ impl ActiveWnd {
         };
         self.surface.configure(&self.device, &config);
         self.window.request_redraw();
-        let args = WndSize {
+        let size = WndSize {
             width: size.width,
             height: size.height,
+        };
+        let args = ResizeArgs {
+            device: &self.device,
+            size,
         };
         let next = self.app.resize(args);
         self.handle_next(next);

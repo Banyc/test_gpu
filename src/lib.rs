@@ -34,12 +34,18 @@ pub trait Update {
 }
 
 #[derive(Debug)]
+pub struct ResizeArgs<'a> {
+    pub device: &'a wgpu::Device,
+    pub size: WndSize,
+}
+pub trait Resize {
+    fn resize(&mut self, args: ResizeArgs<'_>) -> RenderNextStep;
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct WndSize {
     pub width: u32,
     pub height: u32,
-}
-pub trait Resize {
-    fn resize(&mut self, args: WndSize) -> RenderNextStep;
 }
 
 #[derive(Debug, Clone)]

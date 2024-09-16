@@ -8,9 +8,10 @@ use num_traits::Float;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    texture::{ImageSampler, ImageTexture},
+    texture::{DepthBuffer, ImageSampler, ImageTexture},
     transform::{perspective, rotate, translate},
-    Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, Resize, Update, WndSize,
+    Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, Resize, ResizeArgs,
+    Update, WndSize,
 };
 
 const SHADER: &str = include_str!("triangle.wgsl");
@@ -39,6 +40,7 @@ impl RenderInit for DrawTriangleInit {
 #[derive(Debug)]
 struct DrawTriangle {
     wnd_size: WndSize,
+    depth_buffer: DepthBuffer,
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
@@ -166,14 +168,7 @@ impl DrawTriangle {
                 polygon_mode,
                 ..Default::default()
             },
-            // depth_stencil: Some(wgpu::DepthStencilState {
-            //     format: wgpu::TextureFormat::Depth24Plus,
-            //     depth_write_enabled: true,
-            //     depth_compare: wgpu::CompareFunction::Less,
-            //     stencil: wgpu::StencilState::default(),
-            //     bias: wgpu::DepthBiasState::default(),
-            // }),
-            depth_stencil: None,
+            depth_stencil: Some(DepthBuffer::state()),
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(fragment),
             multiview: None,
@@ -190,8 +185,10 @@ impl DrawTriangle {
                 .collect::<Vec<_>>(),
         };
         let bind_group = args.device.create_bind_group(&desc);
+        let depth_buffer = DepthBuffer::new(args.device, args.wnd_size, Some("depth buffer"));
         Self {
             wnd_size: args.wnd_size,
+            depth_buffer,
             pipeline,
             vertex_buffer,
             index_buffer,
@@ -217,14 +214,6 @@ impl Draw for DrawTriangle {
                 store: wgpu::StoreOp::Store,
             },
         };
-        // let depth = wgpu::RenderPassDepthStencilAttachment {
-        //     view: &args.view,
-        //     depth_ops: Some(wgpu::Operations {
-        //         load: wgpu::LoadOp::Clear(1.),
-        //         store: wgpu::StoreOp::Store,
-        //     }),
-        //     stencil_ops: None,
-        // };
         let sin = sin_wave();
         dbg!(sin);
         // let trans = {
@@ -253,8 +242,7 @@ impl Draw for DrawTriangle {
             let desc = wgpu::RenderPassDescriptor {
                 label: None,
                 color_attachments: &[Some(background)],
-                // depth_stencil_attachment: Some(depth),
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(self.depth_buffer.attachment()),
                 timestamp_writes: None,
                 occlusion_query_set: None,
             };
@@ -281,8 +269,9 @@ impl Update for DrawTriangle {
     }
 }
 impl Resize for DrawTriangle {
-    fn resize(&mut self, args: WndSize) -> RenderNextStep {
-        self.wnd_size = args;
+    fn resize(&mut self, args: ResizeArgs<'_>) -> RenderNextStep {
+        self.wnd_size = args.size;
+        self.depth_buffer = DepthBuffer::new(args.device, args.size, Some("depth buffer"));
         RenderNextStep {
             should_request_redraw: false,
         }
@@ -416,8 +405,3 @@ fn normalize_neg_pos_1<T: Float>(v: T) -> T {
     let two = T::from(2.).unwrap();
     (v + one) / two
 }
-
-// struct DepthTexture {}
-// impl DepthTexture {
-//     pub fn new() -> Self {}
-// }

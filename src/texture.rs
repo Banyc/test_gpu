@@ -1,3 +1,5 @@
+use crate::WndSize;
+
 #[derive(Debug)]
 pub struct ImageTexture {
     image: image::RgbaImage,
@@ -86,5 +88,60 @@ impl ImageSampler {
     }
     pub fn sampler_layout(&self) -> wgpu::BindingType {
         wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering)
+    }
+}
+
+#[derive(Debug)]
+pub struct DepthBuffer {
+    _texture: wgpu::Texture,
+    view: wgpu::TextureView,
+}
+impl DepthBuffer {
+    const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
+
+    pub fn new(device: &wgpu::Device, size: WndSize, label: Option<&str>) -> Self {
+        let size = wgpu::Extent3d {
+            width: size.width,
+            height: size.height,
+            depth_or_array_layers: 1,
+        };
+        let desc = wgpu::TextureDescriptor {
+            label,
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: Self::FORMAT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        };
+        let texture = device.create_texture(&desc);
+        let desc = wgpu::TextureViewDescriptor::default();
+        let view = texture.create_view(&desc);
+        Self {
+            _texture: texture,
+            view,
+        }
+    }
+
+    pub fn state() -> wgpu::DepthStencilState {
+        wgpu::DepthStencilState {
+            format: Self::FORMAT,
+            depth_write_enabled: true,
+            depth_compare: wgpu::CompareFunction::Less,
+            stencil: Default::default(),
+            bias: Default::default(),
+        }
+    }
+
+    pub fn attachment(&self) -> wgpu::RenderPassDepthStencilAttachment {
+        wgpu::RenderPassDepthStencilAttachment {
+            view: &self.view,
+            depth_ops: Some(wgpu::Operations {
+                load: wgpu::LoadOp::Clear(1.),
+                store: wgpu::StoreOp::Store,
+            }),
+            stencil_ops: None,
+        }
     }
 }
