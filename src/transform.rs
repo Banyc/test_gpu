@@ -83,6 +83,64 @@ pub fn rotate(axises: [f64; 3], angle: f64) -> TransformMatrix {
     ];
     TransformMatrix::new(transform_size(), data)
 }
+pub fn orthographic(
+    left: f64,
+    right: f64,
+    top: f64,
+    bottom: f64,
+    near: f64,
+    far: f64,
+) -> TransformMatrix {
+    let data = [
+        // row
+        2. / (right - left),
+        0.,
+        0.,
+        0.,
+        // row
+        0.,
+        2. / (top - bottom),
+        0.,
+        0.,
+        // row
+        0.,
+        0.,
+        -2. / (far - near),
+        0.,
+        // row
+        -(right + left) / (right - left),
+        -(top + bottom) / (top - bottom),
+        -(far + near) / (far - near),
+        1.,
+    ];
+    TransformMatrix::new(transform_size(), data)
+}
+pub fn perspective(fov: f64, aspect: f64, near: f64, far: f64) -> TransformMatrix {
+    let tan_inv = 1. / f64::tan(fov / 2.);
+    let data = [
+        // row
+        (1. / aspect) * tan_inv,
+        0.,
+        0.,
+        0.,
+        // row
+        0.,
+        tan_inv,
+        0.,
+        0.,
+        // row
+        0.,
+        0.,
+        -(far + near) / (far - near),
+        -(2. * far * near) / (far - near),
+        // row
+        0.,
+        0.,
+        -1.,
+        0.,
+    ];
+    TransformMatrix::new(transform_size(), data)
+}
 pub fn matrix_mul(left: &TransformMatrix, right: &TransformMatrix) -> TransformMatrix {
     let mut out = zero();
     left.mul_matrix_in(right, &mut out);
