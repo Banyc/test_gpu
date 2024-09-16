@@ -134,7 +134,7 @@ impl DepthBuffer {
         }
     }
 
-    pub fn attachment(&self) -> wgpu::RenderPassDepthStencilAttachment {
+    pub fn attachment_clear(&self) -> wgpu::RenderPassDepthStencilAttachment {
         wgpu::RenderPassDepthStencilAttachment {
             view: &self.view,
             depth_ops: Some(wgpu::Operations {

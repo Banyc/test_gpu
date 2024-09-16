@@ -70,8 +70,9 @@ impl DrawTriangle {
             compilation_options: Default::default(),
             buffers: &[vertex_buffer],
         };
-        let mesh = triangle();
+        // let mesh = triangle();
         // let mesh = rectangle();
+        let mesh = cube();
         let desc = wgpu::util::BufferInitDescriptor {
             label: Some("vertices"),
             contents: bytemuck::cast_slice(&mesh.vertices),
@@ -223,39 +224,83 @@ impl Draw for DrawTriangle {
         //     matrix_mul(&rotate, &translate)
         // };
         // dbg!(&trans);
-        let model = rotate([1., 0., 0.], PI / 3.);
-        let view = translate([0., 0., -3.]);
-        let aspect = self.wnd_size.width as f64 / self.wnd_size.height as f64;
-        let projection = perspective(PI / 4., aspect, 0.1, 100.);
-        let uniform = Uniform {
-            model: model.transpose().into_buffer().map(|x| x as f32),
-            view: view.transpose().into_buffer().map(|x| x as f32),
-            projection: projection.transpose().into_buffer().map(|x| x as f32),
-            _padding: [0; 3],
-            sin: sin as f32,
+
+        let desc = wgpu::CommandEncoderDescriptor {
+            label: Some("clear"),
         };
-        args.queue
-            .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
-        let desc = wgpu::CommandEncoderDescriptor { label: None };
         let mut command = args.device.create_command_encoder(&desc);
         {
             let desc = wgpu::RenderPassDescriptor {
                 label: None,
-                color_attachments: &[Some(background)],
-                depth_stencil_attachment: Some(self.depth_buffer.attachment()),
+                color_attachments: &[Some(background.clone())],
+                depth_stencil_attachment: None,
                 timestamp_writes: None,
                 occlusion_query_set: None,
             };
-            let mut pass = command.begin_render_pass(&desc);
-            let vertex_buffer = self.vertex_buffer.slice(..);
-            pass.set_vertex_buffer(0, vertex_buffer);
-            let index_buffer = self.index_buffer.slice(..);
-            pass.set_index_buffer(index_buffer, wgpu::IndexFormat::Uint32);
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &self.bind_group, &[]);
-            pass.draw_indexed(0..self.index_count, 0, 0..1);
+            let _ = command.begin_render_pass(&desc);
         }
         args.queue.submit([command.finish()]);
+
+        let model_positions = [
+            [0.0, 0.0, 0.0],
+            [2.0, 5.0, -15.0],
+            [-1.5, -2.2, -2.5],
+            [-3.8, -2.0, -12.3],
+            [2.4, -0.4, -3.5],
+            [-1.7, 3.0, -7.5],
+            [1.3, -2.0, -2.5],
+            [1.5, 2.0, -2.5],
+            [1.5, 0.2, -1.5],
+            [-1.3, 1.0, -1.5],
+        ];
+        let models = model_positions.into_iter().map(translate);
+        for (i, model_position) in models.enumerate() {
+            // let model = rotate([1., 0., 0.], PI / 3.);
+            let rotate = rotate([1., 0.3, 0.5], i as f64 * 20. * PI / 180.);
+            // let rotate = rotate([1., 0.3, 0.5], 0.);
+            let model = model_position.mul_matrix_square(&rotate);
+            let view = translate([0., 0., -3.]);
+            let aspect = self.wnd_size.width as f64 / self.wnd_size.height as f64;
+            let projection = perspective(PI / 4., aspect, 0.1, 100.);
+            let uniform = Uniform {
+                model: model.transpose().into_buffer().map(|x| x as f32),
+                view: view.transpose().into_buffer().map(|x| x as f32),
+                projection: projection.transpose().into_buffer().map(|x| x as f32),
+                _padding: [0; 3],
+                sin: sin as f32,
+            };
+            args.queue
+                .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
+            let desc = wgpu::CommandEncoderDescriptor { label: None };
+            let mut command = args.device.create_command_encoder(&desc);
+            {
+                let color = wgpu::RenderPassColorAttachment {
+                    view: &args.view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                };
+                let desc = wgpu::RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[Some(color)],
+                    depth_stencil_attachment: Some(self.depth_buffer.attachment_clear()),
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                };
+                let mut pass = command.begin_render_pass(&desc);
+                let vertex_buffer = self.vertex_buffer.slice(..);
+                pass.set_vertex_buffer(0, vertex_buffer);
+                let index_buffer = self.index_buffer.slice(..);
+                pass.set_index_buffer(index_buffer, wgpu::IndexFormat::Uint32);
+                pass.set_pipeline(&self.pipeline);
+                pass.set_bind_group(0, &self.bind_group, &[]);
+                pass.draw_indexed(0..self.index_count, 0, 0..1);
+            }
+            args.queue.submit([command.finish()]);
+        }
+
         RenderNextStep {
             should_request_redraw: true,
         }
@@ -366,7 +411,200 @@ fn rectangle() -> Mesh {
         top_left: 2,
         bottom_left: 3,
     };
-    let indices = quad_indices(vertex_pos).into();
+    let indices = vertex_pos.indices().into();
+    Mesh { vertices, indices }
+}
+
+#[allow(unused)]
+fn cube() -> Mesh {
+    let color = [1.0, 0.5, 0.2];
+    let vertices = vec![
+        VertexAttributes {
+            position: [-0.5, -0.5, -0.5],
+            tex_coord: [0.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, -0.5, -0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, -0.5],
+            tex_coord: [1.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, -0.5],
+            tex_coord: [1.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, 0.5, -0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, -0.5],
+            tex_coord: [0.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, 0.5],
+            tex_coord: [0.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, -0.5, 0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, 0.5],
+            tex_coord: [1.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, 0.5],
+            tex_coord: [1.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, 0.5, 0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, 0.5],
+            tex_coord: [0.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, 0.5, 0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, 0.5, -0.5],
+            tex_coord: [1.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, -0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, -0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, 0.5],
+            tex_coord: [0.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, 0.5, 0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, 0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, -0.5],
+            tex_coord: [1.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, -0.5, -0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, -0.5, -0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, -0.5, 0.5],
+            tex_coord: [0.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, 0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, -0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, -0.5, -0.5],
+            tex_coord: [1.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, -0.5, 0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, -0.5, 0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, 0.5],
+            tex_coord: [0.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, -0.5, -0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, 0.5, -0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, -0.5],
+            tex_coord: [1.0, 1.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, 0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [0.5, 0.5, 0.5],
+            tex_coord: [1.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, 0.5, 0.5],
+            tex_coord: [0.0, 0.0],
+            color,
+        },
+        VertexAttributes {
+            position: [-0.5, 0.5, -0.5],
+            tex_coord: [0.0, 1.0],
+            color,
+        },
+    ];
+    let indices = vertices
+        .iter()
+        .enumerate()
+        .map(|(i, _)| i as u32)
+        .collect::<Vec<u32>>();
     Mesh { vertices, indices }
 }
 
@@ -377,15 +615,42 @@ struct QuadVertexPos {
     pub top_left: u32,
     pub bottom_left: u32,
 }
-fn quad_indices(vertex_pos: QuadVertexPos) -> [u32; 6] {
-    [
-        vertex_pos.top_right,
-        vertex_pos.bottom_right,
-        vertex_pos.top_left, //
-        vertex_pos.bottom_right,
-        vertex_pos.bottom_left,
-        vertex_pos.top_left,
-    ]
+impl QuadVertexPos {
+    pub fn indices(&self) -> [u32; 6] {
+        [
+            self.top_right,
+            self.bottom_right,
+            self.top_left, //
+            self.bottom_right,
+            self.bottom_left,
+            self.top_left,
+        ]
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CubeVertexPos {
+    pub top: QuadVertexPos,
+    pub bottom: QuadVertexPos,
+    pub left: QuadVertexPos,
+    pub right: QuadVertexPos,
+    pub front: QuadVertexPos,
+    pub behind: QuadVertexPos,
+}
+impl CubeVertexPos {
+    pub fn indices(&self) -> [u32; 36] {
+        self.top
+            .indices()
+            .into_iter()
+            .chain(self.bottom.indices())
+            .chain(self.left.indices())
+            .chain(self.right.indices())
+            .chain(self.front.indices())
+            .chain(self.behind.indices())
+            .collect::<Vec<u32>>()
+            .try_into()
+            .unwrap()
+    }
 }
 
 fn sin_wave() -> f64 {

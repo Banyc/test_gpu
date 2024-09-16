@@ -1,7 +1,7 @@
 use std::num::NonZeroUsize;
 
 use math::{
-    matrix::{ArrayMatrixBuf, Matrix, Size, VecMatrixBuf},
+    matrix::{ArrayMatrixBuf, Size, VecMatrixBuf},
     vector::Vector,
 };
 use strict_num::FiniteF64;
@@ -27,10 +27,6 @@ pub fn point(var: [f64; 3]) -> Point {
     Vector::new(dims)
 }
 
-pub fn zero() -> TransformMatrix {
-    let data = [0.; 16];
-    TransformMatrix::new(transform_size(), data)
-}
 pub fn identity() -> TransformMatrix {
     let m = VecMatrixBuf::identity(transform_size().rows);
     let data = m.into_buffer().try_into().unwrap();
@@ -58,7 +54,9 @@ pub fn rotate(axises: [f64; 3], angle: f64) -> TransformMatrix {
     let cos = angle.cos();
     let cos_com = 1. - angle.cos();
     let sin = angle.sin();
-    let a = axises;
+    let mut a = Vector::new(axises.map(|x| FiniteF64::new(x).unwrap()));
+    a.normalize();
+    let a = a.dims().map(|x| x.get());
     let data = [
         // row
         cos + (a[0].powi(2) * cos_com),
@@ -68,11 +66,11 @@ pub fn rotate(axises: [f64; 3], angle: f64) -> TransformMatrix {
         // row
         (a[0] * a[1] * cos_com) + (a[2] * sin),
         cos + (a[1].powi(2) * cos_com),
-        (a[1] * a[2] * cos_com) + (a[0] * sin),
+        (a[1] * a[2] * cos_com) - (a[0] * sin),
         0.,
         // row
-        (a[0] * a[2] * cos_com) + (a[1] * sin),
-        (a[1] * a[2] * cos_com) - (a[0] * sin),
+        (a[0] * a[2] * cos_com) - (a[1] * sin),
+        (a[1] * a[2] * cos_com) + (a[0] * sin),
         cos + (a[2].powi(2) * cos_com),
         0.,
         // row
@@ -141,21 +139,18 @@ pub fn perspective(fov: f64, aspect: f64, near: f64, far: f64) -> TransformMatri
     ];
     TransformMatrix::new(transform_size(), data)
 }
-pub fn matrix_mul(left: &TransformMatrix, right: &TransformMatrix) -> TransformMatrix {
-    let mut out = zero();
-    left.mul_matrix_in(right, &mut out);
-    out
-}
 
 #[cfg(test)]
 mod tests {
+    use math::matrix::Matrix;
+
     use super::*;
 
     #[test]
     fn test_transform() {
         let trans = translate([1., 2., 3.]);
         let scale = scale([2., 2., 2.]);
-        let m = matrix_mul(&trans, &scale);
+        let m = trans.mul_matrix_square(&scale);
         let expected = TransformMatrix::new(
             transform_size(),
             [
