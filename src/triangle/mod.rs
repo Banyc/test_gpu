@@ -9,41 +9,35 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     transform::{perspective, rotate, translate},
-    view::{Draw, DrawArgs, InitArgs},
+    Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, Resize, Update, WndSize,
 };
 
 const SHADER: &str = include_str!("triangle.wgsl");
 const WALL: &[u8] = include_bytes!("wall.jpg");
 const IS_WIREFRAME: bool = false;
-const PER_PERIOD: usize = 2 << 10;
+const SIN_WAVE_X_PER_PERIOD: usize = 2 << 10;
 
 #[derive(Debug)]
-pub struct DrawTriangle {
-    pipeline: Option<Pipeline>,
-}
-impl DrawTriangle {
+pub struct DrawTriangleInit {}
+impl DrawTriangleInit {
     pub fn new() -> Self {
-        Self { pipeline: None }
+        Self {}
     }
 }
-impl Default for DrawTriangle {
+impl Default for DrawTriangleInit {
     fn default() -> Self {
         Self::new()
     }
 }
-impl Draw for DrawTriangle {
-    fn init(&mut self, args: InitArgs<'_>) {
-        self.pipeline = Some(Pipeline::new(args));
-    }
-
-    fn draw(&mut self, args: DrawArgs<'_>) {
-        let pipeline = self.pipeline.as_ref().unwrap();
-        pipeline.draw(args);
+impl RenderInit for DrawTriangleInit {
+    fn init(&self, args: RenderInitArgs<'_>) -> Box<dyn RenderApp> {
+        Box::new(DrawTriangle::new(args))
     }
 }
 
 #[derive(Debug)]
-struct Pipeline {
+struct DrawTriangle {
+    wnd_size: WndSize,
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
@@ -51,9 +45,9 @@ struct Pipeline {
     uniform_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
 }
-impl Pipeline {
-    pub fn new(args: InitArgs<'_>) -> Self {
-        let texture = Texture::new(args.device, WALL);
+impl DrawTriangle {
+    pub fn new(args: RenderInitArgs<'_>) -> Self {
+        let texture = ImageTexture::new(args.device, WALL);
         texture.register(args.queue);
         let shader = wgpu::ShaderSource::Wgsl(SHADER.into());
         let desc = wgpu::ShaderModuleDescriptor {
@@ -170,6 +164,13 @@ impl Pipeline {
                 polygon_mode,
                 ..Default::default()
             },
+            // depth_stencil: Some(wgpu::DepthStencilState {
+            //     format: wgpu::TextureFormat::Depth24Plus,
+            //     depth_write_enabled: true,
+            //     depth_compare: wgpu::CompareFunction::Less,
+            //     stencil: wgpu::StencilState::default(),
+            //     bias: wgpu::DepthBiasState::default(),
+            // }),
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(fragment),
@@ -188,6 +189,7 @@ impl Pipeline {
         };
         let bind_group = args.device.create_bind_group(&desc);
         Self {
+            wnd_size: args.wnd_size,
             pipeline,
             vertex_buffer,
             index_buffer,
@@ -196,8 +198,9 @@ impl Pipeline {
             bind_group,
         }
     }
-
-    pub fn draw(&self, args: DrawArgs<'_>) {
+}
+impl Draw for DrawTriangle {
+    fn draw(&mut self, args: DrawArgs<'_>) {
         let gray = wgpu::Color {
             r: 0.2,
             g: 0.3,
@@ -212,16 +215,15 @@ impl Pipeline {
                 store: wgpu::StoreOp::Store,
             },
         };
-        let sin = normalize_neg_pos_1(f64::sin(
-            (SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis()
-                % (PER_PERIOD as u128)) as f64
-                * 2.
-                * PI
-                / PER_PERIOD as f64,
-        ));
+        // let depth = wgpu::RenderPassDepthStencilAttachment {
+        //     view: &args.view,
+        //     depth_ops: Some(wgpu::Operations {
+        //         load: wgpu::LoadOp::Clear(1.),
+        //         store: wgpu::StoreOp::Store,
+        //     }),
+        //     stencil_ops: None,
+        // };
+        let sin = sin_wave();
         dbg!(sin);
         // let trans = {
         //     let translate = translate([0.5, -0.5, 0.0]);
@@ -232,7 +234,8 @@ impl Pipeline {
         // dbg!(&trans);
         let model = rotate([1., 0., 0.], PI / 3.);
         let view = translate([0., 0., -3.]);
-        let projection = perspective(PI / 4., 800. / 600., 0.1, 100.);
+        let aspect = self.wnd_size.width as f64 / self.wnd_size.height as f64;
+        let projection = perspective(PI / 4., aspect, 0.1, 100.);
         let uniform = Uniform {
             model: model.transpose().into_buffer().map(|x| x as f32),
             view: view.transpose().into_buffer().map(|x| x as f32),
@@ -248,6 +251,7 @@ impl Pipeline {
             let desc = wgpu::RenderPassDescriptor {
                 label: None,
                 color_attachments: &[Some(background)],
+                // depth_stencil_attachment: Some(depth),
                 depth_stencil_attachment: None,
                 timestamp_writes: None,
                 occlusion_query_set: None,
@@ -264,6 +268,15 @@ impl Pipeline {
         args.queue.submit([command.finish()]);
     }
 }
+impl Update for DrawTriangle {
+    fn update(&mut self, _event: winit::event::WindowEvent) {}
+}
+impl Resize for DrawTriangle {
+    fn resize(&mut self, args: WndSize) {
+        self.wnd_size = args;
+    }
+}
+impl RenderApp for DrawTriangle {}
 
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
@@ -374,6 +387,18 @@ fn quad_indices(vertex_pos: QuadVertexPos) -> [u32; 6] {
     ]
 }
 
+fn sin_wave() -> f64 {
+    normalize_neg_pos_1(f64::sin(
+        (SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+            % (SIN_WAVE_X_PER_PERIOD as u128)) as f64
+            * 2.
+            * PI
+            / SIN_WAVE_X_PER_PERIOD as f64,
+    ))
+}
 fn normalize_neg_pos_1<T: Float>(v: T) -> T {
     let one = T::from(1.).unwrap();
     let two = T::from(2.).unwrap();
@@ -381,13 +406,13 @@ fn normalize_neg_pos_1<T: Float>(v: T) -> T {
 }
 
 #[derive(Debug)]
-struct Texture {
+struct ImageTexture {
     image: image::RgbaImage,
     texture: wgpu::Texture,
     view: wgpu::TextureView,
     sampler: wgpu::Sampler,
 }
-impl Texture {
+impl ImageTexture {
     pub fn new(device: &wgpu::Device, bytes: &[u8]) -> Self {
         let image = image::load_from_memory(bytes).unwrap().flipv();
         let image = image.to_rgba8();
@@ -461,3 +486,8 @@ impl Texture {
         wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering)
     }
 }
+
+// struct DepthTexture {}
+// impl DepthTexture {
+//     pub fn new() -> Self {}
+// }
