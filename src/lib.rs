@@ -1,5 +1,6 @@
 pub mod compute;
 pub mod gpu;
+pub mod texture;
 pub mod transform;
 pub mod triangle;
 pub mod wnd;
