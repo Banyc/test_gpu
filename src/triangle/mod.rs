@@ -48,7 +48,7 @@ struct DrawTriangle {
 }
 impl DrawTriangle {
     pub fn new(args: RenderInitArgs<'_>) -> Self {
-        let texture = ImageTexture::new(args.device, WALL);
+        let texture = ImageTexture::new(args.device, WALL, Some("wall"));
         texture.register(args.queue);
         let shader = wgpu::ShaderSource::Wgsl(SHADER.into());
         let desc = wgpu::ShaderModuleDescriptor {

@@ -6,7 +6,7 @@ pub struct ImageTexture {
     sampler: wgpu::Sampler,
 }
 impl ImageTexture {
-    pub fn new(device: &wgpu::Device, bytes: &[u8]) -> Self {
+    pub fn new(device: &wgpu::Device, bytes: &[u8], label: Option<&str>) -> Self {
         let image = image::load_from_memory(bytes).unwrap().flipv();
         let image = image.to_rgba8();
         let (width, height) = image.dimensions();
@@ -16,7 +16,7 @@ impl ImageTexture {
             depth_or_array_layers: 1,
         };
         let desc = wgpu::TextureDescriptor {
-            label: Some("wall"),
+            label,
             size: texture_size,
             mip_level_count: 1,
             sample_count: 1,
