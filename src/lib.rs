@@ -26,11 +26,11 @@ pub struct DrawArgs<'a> {
     pub queue: &'a wgpu::Queue,
 }
 pub trait Draw {
-    fn draw(&mut self, args: DrawArgs<'_>);
+    fn draw(&mut self, args: DrawArgs<'_>) -> RenderNextStep;
 }
 
 pub trait Update {
-    fn update(&mut self, event: winit::event::WindowEvent);
+    fn update(&mut self, event: winit::event::WindowEvent) -> RenderNextStep;
 }
 
 #[derive(Debug)]
@@ -39,5 +39,10 @@ pub struct WndSize {
     pub height: u32,
 }
 pub trait Resize {
-    fn resize(&mut self, args: WndSize);
+    fn resize(&mut self, args: WndSize) -> RenderNextStep;
+}
+
+#[derive(Debug, Clone)]
+pub struct RenderNextStep {
+    pub should_request_redraw: bool,
 }

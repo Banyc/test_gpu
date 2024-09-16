@@ -10,7 +10,7 @@ use winit::{
 
 use crate::{
     gpu::{adapter, device, instance},
-    DrawArgs, RenderApp, RenderInit, RenderInitArgs, WndSize,
+    DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, WndSize,
 };
 
 #[derive(Debug)]
@@ -121,11 +121,13 @@ impl ActiveWnd {
             width: size.width,
             height: size.height,
         };
-        self.app.resize(args);
+        let next = self.app.resize(args);
+        self.handle_next(next);
     }
 
     pub fn update(&mut self, event: winit::event::WindowEvent) {
-        self.app.update(event);
+        let next = self.app.update(event);
+        self.handle_next(next);
     }
 
     pub fn draw(&mut self) -> anyhow::Result<()> {
@@ -137,9 +139,15 @@ impl ActiveWnd {
             device: &self.device,
             queue: &self.queue,
         };
-        self.app.draw(args);
+        let next = self.app.draw(args);
         frame.present();
-        self.window.request_redraw();
+        self.handle_next(next);
         Ok(())
+    }
+
+    fn handle_next(&mut self, next: RenderNextStep) {
+        if next.should_request_redraw {
+            self.window.request_redraw();
+        }
     }
 }

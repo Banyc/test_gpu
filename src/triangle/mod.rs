@@ -10,7 +10,7 @@ use wgpu::util::DeviceExt;
 use crate::{
     texture::ImageTexture,
     transform::{perspective, rotate, translate},
-    Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, Resize, Update, WndSize,
+    Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, Resize, Update, WndSize,
 };
 
 const SHADER: &str = include_str!("triangle.wgsl");
@@ -201,7 +201,7 @@ impl DrawTriangle {
     }
 }
 impl Draw for DrawTriangle {
-    fn draw(&mut self, args: DrawArgs<'_>) {
+    fn draw(&mut self, args: DrawArgs<'_>) -> RenderNextStep {
         let gray = wgpu::Color {
             r: 0.2,
             g: 0.3,
@@ -267,14 +267,24 @@ impl Draw for DrawTriangle {
             pass.draw_indexed(0..self.index_count, 0, 0..1);
         }
         args.queue.submit([command.finish()]);
+        RenderNextStep {
+            should_request_redraw: true,
+        }
     }
 }
 impl Update for DrawTriangle {
-    fn update(&mut self, _event: winit::event::WindowEvent) {}
+    fn update(&mut self, _event: winit::event::WindowEvent) -> RenderNextStep {
+        RenderNextStep {
+            should_request_redraw: false,
+        }
+    }
 }
 impl Resize for DrawTriangle {
-    fn resize(&mut self, args: WndSize) {
+    fn resize(&mut self, args: WndSize) -> RenderNextStep {
         self.wnd_size = args;
+        RenderNextStep {
+            should_request_redraw: false,
+        }
     }
 }
 impl RenderApp for DrawTriangle {}
