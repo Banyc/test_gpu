@@ -139,6 +139,7 @@ impl ActiveWnd {
         };
         self.app.draw(args);
         frame.present();
+        self.window.request_redraw();
         Ok(())
     }
 }
