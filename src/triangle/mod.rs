@@ -8,7 +8,7 @@ use num_traits::Float;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    texture::ImageTexture,
+    texture::{ImageSampler, ImageTexture},
     transform::{perspective, rotate, translate},
     Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, Resize, Update, WndSize,
 };
@@ -50,6 +50,7 @@ impl DrawTriangle {
     pub fn new(args: RenderInitArgs<'_>) -> Self {
         let texture = ImageTexture::new(args.device, WALL, Some("wall"));
         texture.register(args.queue);
+        let sampler = ImageSampler::new(args.device, Some("sampler"));
         let shader = wgpu::ShaderSource::Wgsl(SHADER.into());
         let desc = wgpu::ShaderModuleDescriptor {
             label: None,
@@ -129,12 +130,12 @@ impl DrawTriangle {
                 wgpu::BindGroupLayoutEntry {
                     binding: 2,
                     visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: texture.sampler_layout(),
+                    ty: sampler.sampler_layout(),
                     count: None,
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: wgpu::BindingResource::Sampler(texture.sampler()),
+                    resource: wgpu::BindingResource::Sampler(sampler.sampler()),
                 },
             ),
         ];

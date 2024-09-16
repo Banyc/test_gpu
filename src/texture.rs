@@ -3,7 +3,6 @@ pub struct ImageTexture {
     image: image::RgbaImage,
     texture: wgpu::Texture,
     view: wgpu::TextureView,
-    sampler: wgpu::Sampler,
 }
 impl ImageTexture {
     pub fn new(device: &wgpu::Device, bytes: &[u8], label: Option<&str>) -> Self {
@@ -28,22 +27,10 @@ impl ImageTexture {
         let texture = device.create_texture(&desc);
         let desc = wgpu::TextureViewDescriptor::default();
         let view = texture.create_view(&desc);
-        let desc = wgpu::SamplerDescriptor {
-            label: Some("sampler"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Linear,
-            ..Default::default()
-        };
-        let sampler = device.create_sampler(&desc);
         Self {
             image,
             texture,
             view,
-            sampler,
         }
     }
 
@@ -65,15 +52,37 @@ impl ImageTexture {
     pub fn view(&self) -> &wgpu::TextureView {
         &self.view
     }
-    pub fn sampler(&self) -> &wgpu::Sampler {
-        &self.sampler
-    }
     pub fn texture_layout(&self) -> wgpu::BindingType {
         wgpu::BindingType::Texture {
             sample_type: wgpu::TextureSampleType::Float { filterable: true },
             view_dimension: wgpu::TextureViewDimension::D2,
             multisampled: false,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct ImageSampler {
+    sampler: wgpu::Sampler,
+}
+impl ImageSampler {
+    pub fn new(device: &wgpu::Device, label: Option<&str>) -> Self {
+        let desc = wgpu::SamplerDescriptor {
+            label,
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        };
+        let sampler = device.create_sampler(&desc);
+        Self { sampler }
+    }
+
+    pub fn sampler(&self) -> &wgpu::Sampler {
+        &self.sampler
     }
     pub fn sampler_layout(&self) -> wgpu::BindingType {
         wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering)
