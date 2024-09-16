@@ -8,7 +8,7 @@ use num_traits::Float;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    transform::{matrix_mul, rotate, translate},
+    transform::{perspective, rotate, translate},
     view::{Draw, DrawArgs, InitArgs},
 };
 
@@ -223,15 +223,20 @@ impl Pipeline {
                 / PER_PERIOD as f64,
         ));
         dbg!(sin);
-        let trans = {
-            let translate = translate([0.5, -0.5, 0.0]);
-            let angle = sin * PI * 2.;
-            let rotate = rotate([0.0, 0.0, 1.0], angle);
-            matrix_mul(&rotate, &translate)
-        };
-        dbg!(&trans);
+        // let trans = {
+        //     let translate = translate([0.5, -0.5, 0.0]);
+        //     let angle = sin * PI * 2.;
+        //     let rotate = rotate([0.0, 0.0, 1.0], angle);
+        //     matrix_mul(&rotate, &translate)
+        // };
+        // dbg!(&trans);
+        let model = rotate([1., 0., 0.], PI / 3.);
+        let view = translate([0., 0., -3.]);
+        let projection = perspective(PI / 4., 800. / 600., 0.1, 100.);
         let uniform = Uniform {
-            transform: trans.transpose().into_buffer().map(|x| x as f32),
+            model: model.transpose().into_buffer().map(|x| x as f32),
+            view: view.transpose().into_buffer().map(|x| x as f32),
+            projection: projection.transpose().into_buffer().map(|x| x as f32),
             _padding: [0; 3],
             sin: sin as f32,
         };
@@ -258,7 +263,9 @@ impl Pipeline {
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
 struct Uniform {
-    pub transform: [f32; 16],
+    pub model: [f32; 16],
+    pub view: [f32; 16],
+    pub projection: [f32; 16],
     pub _padding: [u32; 3],
     pub sin: f32,
 }
