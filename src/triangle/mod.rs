@@ -9,7 +9,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     texture::{DepthBuffer, ImageSampler, ImageTexture},
-    transform::{perspective, rotate, translate},
+    transform::{look_at, perspective, rotate, translate},
     Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, Resize, ResizeArgs,
     Update, WndSize,
 };
@@ -259,7 +259,7 @@ impl Draw for DrawTriangle {
             let rotate = rotate([1., 0.3, 0.5], sin * i as f64 * 20. * PI / 180.);
             // let rotate = rotate([1., 0.3, 0.5], 0.);
             let model = model_position.mul_matrix_square(&rotate);
-            let view = translate([0., 0., -3.]);
+            let view = look_at([0., 0., 3.], [0., 0., 0.], [0., 1., 0.]);
             let aspect = self.wnd_size.width as f64 / self.wnd_size.height as f64;
             let projection = perspective(PI / 4., aspect, 0.1, 100.);
             let uniform = Uniform {

@@ -81,6 +81,33 @@ pub fn rotate(axises: [f64; 3], angle: f64) -> TransformMatrix {
     ];
     TransformMatrix::new(transform_size(), data)
 }
+pub fn change_of_space(i: [f64; 3], j: [f64; 3], k: [f64; 3], h: [f64; 3]) -> TransformMatrix {
+    let data = [
+        i[0], i[1], i[2], 0., //
+        j[0], j[1], j[2], 0., //
+        k[0], k[1], k[2], 0., //
+        0., 0., 0., 1., //
+    ];
+    let change_of_axises = ArrayMatrixBuf::new(transform_size(), data);
+    let origin_translate = translate(h.map(|x| -x));
+    change_of_axises.mul_matrix_square(&origin_translate)
+}
+pub fn look_at(h: [f64; 3], target: [f64; 3], up: [f64; 3]) -> TransformMatrix {
+    let h = Vector::new(h.map(|x| FiniteF64::new(x).unwrap()));
+    let target = Vector::new(target.map(|x| FiniteF64::new(x).unwrap()));
+    let up = Vector::new(up.map(|x| FiniteF64::new(x).unwrap()));
+    let mut k = h.sub(&target);
+    k.normalize();
+    let mut i = k.cross(&up);
+    i.normalize();
+    let j = k.cross(&i);
+    change_of_space(
+        i.dims().map(|x| x.get()),
+        j.dims().map(|x| x.get()),
+        k.dims().map(|x| x.get()),
+        h.dims().map(|x| x.get()),
+    )
+}
 pub fn orthographic(
     left: f64,
     right: f64,
