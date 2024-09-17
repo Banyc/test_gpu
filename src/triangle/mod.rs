@@ -1,6 +1,6 @@
 use std::{
     f64::consts::PI,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
 use bytemuck_derive::{Pod, Zeroable};
@@ -9,10 +9,11 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     camera::{Camera, CameraMovement},
+    delta_time::DeltaTime,
     texture::{DepthBuffer, ImageSampler, ImageTexture},
     transform::{perspective, rotate, translate},
     Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, Resize, ResizeArgs,
-    Update, WndSize,
+    Update, UpdateArgs, WndSize,
 };
 
 const SHADER: &str = include_str!("triangle.wgsl");
@@ -49,6 +50,7 @@ struct DrawTriangle {
     uniform_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
     camera: Camera,
+    draw_delta_time: DeltaTime,
 }
 impl DrawTriangle {
     pub fn new(args: RenderInitArgs<'_>) -> Self {
@@ -190,6 +192,7 @@ impl DrawTriangle {
         let bind_group = args.device.create_bind_group(&desc);
         let depth_buffer = DepthBuffer::new(args.device, args.wnd_size, Some("depth buffer"));
         let camera = Camera::new();
+        let draw_delta_time = DeltaTime::new(Instant::now());
         Self {
             wnd_size: args.wnd_size,
             depth_buffer,
@@ -200,11 +203,13 @@ impl DrawTriangle {
             uniform_buffer,
             bind_group,
             camera,
+            draw_delta_time,
         }
     }
 }
 impl Draw for DrawTriangle {
     fn draw(&mut self, args: DrawArgs<'_>) -> RenderNextStep {
+        self.draw_delta_time.update(Instant::now());
         let gray = wgpu::Color {
             r: 0.2,
             g: 0.3,
@@ -313,26 +318,27 @@ impl Draw for DrawTriangle {
     }
 }
 impl Update for DrawTriangle {
-    fn update(&mut self, event: winit::event::WindowEvent) -> RenderNextStep {
-        let elapsed = 1.;
+    fn update(&mut self, args: UpdateArgs) -> RenderNextStep {
         if let winit::event::WindowEvent::KeyboardInput {
             device_id: _,
             event,
             is_synthetic: _,
-        } = &event
+        } = &args.event
         {
             if let winit::keyboard::PhysicalKey::Code(key_code) = event.physical_key {
-                let direction = match key_code {
-                    winit::keyboard::KeyCode::KeyW => Some(CameraMovement::Front),
-                    winit::keyboard::KeyCode::KeyS => Some(CameraMovement::Back),
-                    winit::keyboard::KeyCode::KeyA => Some(CameraMovement::Left),
-                    winit::keyboard::KeyCode::KeyD => Some(CameraMovement::Right),
-                    winit::keyboard::KeyCode::Space => Some(CameraMovement::Up),
-                    winit::keyboard::KeyCode::ShiftLeft => Some(CameraMovement::Down),
-                    _ => None,
-                };
-                if let Some(direction) = direction {
-                    self.camera.mov(direction, elapsed);
+                if let Some(delta_time) = self.draw_delta_time.delta() {
+                    let direction = match key_code {
+                        winit::keyboard::KeyCode::KeyW => Some(CameraMovement::Front),
+                        winit::keyboard::KeyCode::KeyS => Some(CameraMovement::Back),
+                        winit::keyboard::KeyCode::KeyA => Some(CameraMovement::Left),
+                        winit::keyboard::KeyCode::KeyD => Some(CameraMovement::Right),
+                        winit::keyboard::KeyCode::Space => Some(CameraMovement::Up),
+                        winit::keyboard::KeyCode::ShiftLeft => Some(CameraMovement::Down),
+                        _ => None,
+                    };
+                    if let Some(direction) = direction {
+                        self.camera.mov(direction, delta_time.as_secs_f64());
+                    }
                 }
             }
         }

@@ -12,7 +12,7 @@ pub struct Camera {
 impl Camera {
     pub fn new() -> Self {
         Self {
-            speed: 0.05,
+            speed: 2.5,
             position: Vector::new([0., 0., 0.].map(|x| FiniteF64::new(x).unwrap())),
             facing: Vector::new([0., 0., -1.].map(|x| FiniteF64::new(x).unwrap())),
         }

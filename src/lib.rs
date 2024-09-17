@@ -1,5 +1,6 @@
 pub mod camera;
 pub mod compute;
+pub mod delta_time;
 pub mod gpu;
 pub mod texture;
 pub mod transform;
@@ -30,8 +31,12 @@ pub trait Draw {
     fn draw(&mut self, args: DrawArgs<'_>) -> RenderNextStep;
 }
 
+#[derive(Debug)]
+pub struct UpdateArgs {
+    pub event: winit::event::WindowEvent,
+}
 pub trait Update {
-    fn update(&mut self, event: winit::event::WindowEvent) -> RenderNextStep;
+    fn update(&mut self, args: UpdateArgs) -> RenderNextStep;
 }
 
 #[derive(Debug)]

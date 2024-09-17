@@ -10,7 +10,8 @@ use winit::{
 
 use crate::{
     gpu::{adapter, device, instance},
-    DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, ResizeArgs, WndSize,
+    DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, ResizeArgs, UpdateArgs,
+    WndSize,
 };
 
 #[derive(Debug)]
@@ -130,7 +131,8 @@ impl ActiveWnd {
     }
 
     pub fn update(&mut self, event: winit::event::WindowEvent) {
-        let next = self.app.update(event);
+        let args = UpdateArgs { event };
+        let next = self.app.update(args);
         self.handle_next(next);
     }
 
