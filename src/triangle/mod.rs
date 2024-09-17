@@ -8,8 +8,9 @@ use num_traits::Float;
 use wgpu::util::DeviceExt;
 
 use crate::{
+    camera::{Camera, CameraMovement},
     texture::{DepthBuffer, ImageSampler, ImageTexture},
-    transform::{look_at, perspective, rotate, translate},
+    transform::{perspective, rotate, translate},
     Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, Resize, ResizeArgs,
     Update, WndSize,
 };
@@ -47,6 +48,7 @@ struct DrawTriangle {
     index_count: u32,
     uniform_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
+    camera: Camera,
 }
 impl DrawTriangle {
     pub fn new(args: RenderInitArgs<'_>) -> Self {
@@ -187,6 +189,7 @@ impl DrawTriangle {
         };
         let bind_group = args.device.create_bind_group(&desc);
         let depth_buffer = DepthBuffer::new(args.device, args.wnd_size, Some("depth buffer"));
+        let camera = Camera::new();
         Self {
             wnd_size: args.wnd_size,
             depth_buffer,
@@ -196,6 +199,7 @@ impl DrawTriangle {
             index_count: mesh.indices.len() as u32,
             uniform_buffer,
             bind_group,
+            camera,
         }
     }
 }
@@ -241,6 +245,13 @@ impl Draw for DrawTriangle {
         }
         args.queue.submit([command.finish()]);
 
+        // let radius = 10.;
+        // let (sin, cos) = waves();
+        // let view = look_at([sin * radius, 0., cos * radius], [0., 0., 0.], [0., 1., 0.]);
+        let view = self.camera.view_matrix();
+        let aspect = self.wnd_size.width as f64 / self.wnd_size.height as f64;
+        let projection = perspective(PI / 4., aspect, 0.1, 100.);
+
         let model_positions = [
             [0.0, 0.0, 0.0],
             [2.0, 5.0, -15.0],
@@ -257,11 +268,6 @@ impl Draw for DrawTriangle {
         for (i, model_position) in models.enumerate() {
             let rotate = rotate([1., 0.3, 0.5], normalized_sin * i as f64 * 20. * PI / 180.);
             let model = model_position.mul_matrix_square(&rotate);
-            let radius = 10.;
-            let (sin, cos) = waves();
-            let view = look_at([sin * radius, 0., cos * radius], [0., 0., 0.], [0., 1., 0.]);
-            let aspect = self.wnd_size.width as f64 / self.wnd_size.height as f64;
-            let projection = perspective(PI / 4., aspect, 0.1, 100.);
             let uniform = Uniform {
                 model: model.transpose().into_buffer().map(|x| x as f32),
                 view: view.transpose().into_buffer().map(|x| x as f32),
@@ -307,7 +313,29 @@ impl Draw for DrawTriangle {
     }
 }
 impl Update for DrawTriangle {
-    fn update(&mut self, _event: winit::event::WindowEvent) -> RenderNextStep {
+    fn update(&mut self, event: winit::event::WindowEvent) -> RenderNextStep {
+        let elapsed = 1.;
+        if let winit::event::WindowEvent::KeyboardInput {
+            device_id: _,
+            event,
+            is_synthetic: _,
+        } = &event
+        {
+            if let winit::keyboard::PhysicalKey::Code(key_code) = event.physical_key {
+                let direction = match key_code {
+                    winit::keyboard::KeyCode::KeyW => Some(CameraMovement::Front),
+                    winit::keyboard::KeyCode::KeyS => Some(CameraMovement::Back),
+                    winit::keyboard::KeyCode::KeyA => Some(CameraMovement::Left),
+                    winit::keyboard::KeyCode::KeyD => Some(CameraMovement::Right),
+                    winit::keyboard::KeyCode::Space => Some(CameraMovement::Up),
+                    winit::keyboard::KeyCode::ShiftLeft => Some(CameraMovement::Down),
+                    _ => None,
+                };
+                if let Some(direction) = direction {
+                    self.camera.mov(direction, elapsed);
+                }
+            }
+        }
         RenderNextStep {
             should_request_redraw: false,
         }
