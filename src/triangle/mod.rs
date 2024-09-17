@@ -215,8 +215,8 @@ impl Draw for DrawTriangle {
                 store: wgpu::StoreOp::Store,
             },
         };
-        let sin = sin_wave();
-        dbg!(sin);
+        let normalized_sin = normalized_sin();
+        dbg!(normalized_sin);
         // let trans = {
         //     let translate = translate([0.5, -0.5, 0.0]);
         //     let angle = sin * PI * 2.;
@@ -255,11 +255,11 @@ impl Draw for DrawTriangle {
         ];
         let models = model_positions.into_iter().map(translate);
         for (i, model_position) in models.enumerate() {
-            // let model = rotate([1., 0., 0.], PI / 3.);
-            let rotate = rotate([1., 0.3, 0.5], sin * i as f64 * 20. * PI / 180.);
-            // let rotate = rotate([1., 0.3, 0.5], 0.);
+            let rotate = rotate([1., 0.3, 0.5], normalized_sin * i as f64 * 20. * PI / 180.);
             let model = model_position.mul_matrix_square(&rotate);
-            let view = look_at([0., 0., 3.], [0., 0., 0.], [0., 1., 0.]);
+            let radius = 10.;
+            let (sin, cos) = waves();
+            let view = look_at([sin * radius, 0., cos * radius], [0., 0., 0.], [0., 1., 0.]);
             let aspect = self.wnd_size.width as f64 / self.wnd_size.height as f64;
             let projection = perspective(PI / 4., aspect, 0.1, 100.);
             let uniform = Uniform {
@@ -267,7 +267,7 @@ impl Draw for DrawTriangle {
                 view: view.transpose().into_buffer().map(|x| x as f32),
                 projection: projection.transpose().into_buffer().map(|x| x as f32),
                 _padding: [0; 3],
-                sin: sin as f32,
+                sin: normalized_sin as f32,
             };
             args.queue
                 .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
@@ -653,20 +653,24 @@ impl CubeVertexPos {
     }
 }
 
-fn sin_wave() -> f64 {
-    normalize_neg_pos_1(f64::sin(
-        (SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis()
-            % (SIN_WAVE_X_PER_PERIOD as u128)) as f64
-            * 2.
-            * PI
-            / SIN_WAVE_X_PER_PERIOD as f64,
-    ))
+fn normalized_sin() -> f64 {
+    let (sin, _) = waves();
+    normalize_neg_pos_1(sin)
 }
 fn normalize_neg_pos_1<T: Float>(v: T) -> T {
     let one = T::from(1.).unwrap();
     let two = T::from(2.).unwrap();
     (v + one) / two
+}
+
+fn waves() -> (f64, f64) {
+    let x = (SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
+        % (SIN_WAVE_X_PER_PERIOD as u128)) as f64
+        * 2.
+        * PI
+        / SIN_WAVE_X_PER_PERIOD as f64;
+    (x.sin(), x.cos())
 }
