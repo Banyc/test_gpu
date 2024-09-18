@@ -28,35 +28,35 @@ impl Camera {
         self.facing = v;
     }
 
-    pub fn mov(&mut self, direction: CameraMovement, elapsed: f64) {
-        self.walk(direction.walk, elapsed);
+    pub fn mov(&mut self, movement: DegreesOfMovement, elapsed: f64) {
+        self.translate(movement.transitional, elapsed);
     }
-    fn walk(&mut self, direction: CameraWalk, elapsed: f64) {
+    fn translate(&mut self, movement: TranslationalEnvelops, elapsed: f64) {
         let dist = self.speed * elapsed;
-        let surge = match direction.surge {
+        let surge = match movement.surge {
             None => 0.,
-            Some(Surge::Forward) => 1.,
-            Some(Surge::Backward) => -1.,
+            Some(Surge::Forward) => -1.,
+            Some(Surge::Backward) => 1.,
         };
-        let sway = match direction.sway {
+        let sway = match movement.sway {
             None => 0.,
             Some(Sway::Left) => -1.,
             Some(Sway::Right) => 1.,
         };
-        let heave = match direction.heave {
+        let heave = match movement.heave {
             None => 0.,
             Some(Heave::Down) => -1.,
             Some(Heave::Up) => 1.,
         };
         let horizontal = || {
-            if direction.sway.is_none() && direction.surge.is_none() {
+            if movement.sway.is_none() && movement.surge.is_none() {
                 return None;
             }
             let sway = {
                 let direction = [
-                    self.facing.dims()[2].get(),
+                    -self.facing.dims()[2].get(),
                     0.,
-                    -self.facing.dims()[0].get(),
+                    self.facing.dims()[0].get(),
                 ];
                 let mut direction = Vector::new(direction.map(|x| FiniteF64::new(x).unwrap()));
                 direction.mul(sway);
@@ -75,8 +75,8 @@ impl Camera {
         let horizontal = horizontal();
 
         let vertical = || {
-            direction.heave?;
-            let mut vertical = Vector::new([0., -heave, 0.].map(|x| FiniteF64::new(x).unwrap()));
+            movement.heave?;
+            let mut vertical = Vector::new([0., heave, 0.].map(|x| FiniteF64::new(x).unwrap()));
             vertical.set_mag(dist);
             Some(vertical)
         };
@@ -88,7 +88,8 @@ impl Camera {
             (Some(x), None) => x,
             (Some(a), Some(b)) => a.add(&b),
         };
-        self.position = self.position.add(&translation);
+        self.position = self.position.sub(&translation);
+        dbg!(&self.position);
     }
 
     pub fn view_matrix(&self) -> TransformMatrix {
@@ -107,7 +108,7 @@ impl Default for Camera {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct CameraWalk {
+pub struct TranslationalEnvelops {
     pub surge: Option<Surge>,
     pub sway: Option<Sway>,
     pub heave: Option<Heave>,
@@ -130,6 +131,6 @@ pub enum Heave {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct CameraMovement {
-    pub walk: CameraWalk,
+pub struct DegreesOfMovement {
+    pub transitional: TranslationalEnvelops,
 }

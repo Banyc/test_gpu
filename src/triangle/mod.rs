@@ -8,7 +8,7 @@ use num_traits::Float;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    camera::{Camera, CameraMovement, CameraWalk, Heave, Surge, Sway},
+    camera::{Camera, DegreesOfMovement, Heave, Surge, Sway, TranslationalEnvelops},
     delta_time::DeltaTime,
     texture::{DepthBuffer, ImageSampler, ImageTexture},
     transform::{perspective, rotate, translate},
@@ -236,8 +236,8 @@ impl DrawTriangle {
             (true, false) => Some(Heave::Up),
             (false, true) => Some(Heave::Down),
         };
-        let movement = CameraMovement {
-            walk: CameraWalk { surge, sway, heave },
+        let movement = DegreesOfMovement {
+            transitional: TranslationalEnvelops { surge, sway, heave },
         };
         self.camera.mov(movement, delta_time.as_secs_f64());
     }
