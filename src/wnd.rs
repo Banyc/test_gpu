@@ -10,8 +10,8 @@ use winit::{
 
 use crate::{
     gpu::{adapter, device, instance},
-    DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, ResizeArgs, UpdateArgs,
-    WndSize,
+    DrawArgs, RenderApp, RenderContext, RenderInit, RenderInitArgs, RenderNextStep, ResizeArgs,
+    UpdateArgs, WndSize,
 };
 
 #[derive(Debug)]
@@ -71,6 +71,7 @@ struct ActiveWnd {
     device: wgpu::Device,
     queue: wgpu::Queue,
     app: Box<dyn RenderApp>,
+    context: RenderContext,
 }
 impl ActiveWnd {
     pub async fn new<A>(
@@ -99,6 +100,7 @@ impl ActiveWnd {
             wnd_size: size,
         };
         let app = app.init(args);
+        let context = RenderContext::new();
         Ok(Self {
             window,
             surface,
@@ -106,6 +108,7 @@ impl ActiveWnd {
             device,
             queue,
             app,
+            context,
         })
     }
 
@@ -125,13 +128,25 @@ impl ActiveWnd {
         let args = ResizeArgs {
             device: &self.device,
             size,
+            context: &self.context,
         };
         let next = self.app.resize(args);
         self.handle_next(next);
     }
 
     pub fn update(&mut self, event: winit::event::WindowEvent) {
-        let args = UpdateArgs { event };
+        if let winit::event::WindowEvent::KeyboardInput {
+            device_id: _,
+            event,
+            is_synthetic: _,
+        } = &event
+        {
+            self.context.input.update_key(event);
+        }
+        let args = UpdateArgs {
+            event,
+            context: &self.context,
+        };
         let next = self.app.update(args);
         self.handle_next(next);
     }
@@ -144,6 +159,7 @@ impl ActiveWnd {
             view,
             device: &self.device,
             queue: &self.queue,
+            context: &self.context,
         };
         let next = self.app.draw(args);
         frame.present();

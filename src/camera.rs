@@ -29,35 +29,66 @@ impl Camera {
     }
 
     pub fn mov(&mut self, direction: CameraMovement, elapsed: f64) {
+        self.walk(direction.walk, elapsed);
+    }
+    fn walk(&mut self, direction: CameraWalk, elapsed: f64) {
         let dist = self.speed * elapsed;
-        let dist = match direction {
-            CameraMovement::Down | CameraMovement::Right | CameraMovement::Front => dist,
-            CameraMovement::Up | CameraMovement::Left | CameraMovement::Back => -dist,
+        let surge = match direction.surge {
+            None => 0.,
+            Some(Surge::Forward) => 1.,
+            Some(Surge::Backward) => -1.,
         };
-        let dist = match direction {
-            CameraMovement::Up | CameraMovement::Down => {
-                Vector::new([0., dist, 0.].map(|x| FiniteF64::new(x).unwrap()))
+        let sway = match direction.sway {
+            None => 0.,
+            Some(Sway::Left) => -1.,
+            Some(Sway::Right) => 1.,
+        };
+        let heave = match direction.heave {
+            None => 0.,
+            Some(Heave::Down) => -1.,
+            Some(Heave::Up) => 1.,
+        };
+        let horizontal = || {
+            if direction.sway.is_none() && direction.surge.is_none() {
+                return None;
             }
-            CameraMovement::Left | CameraMovement::Right => {
+            let sway = {
                 let direction = [
                     self.facing.dims()[2].get(),
                     0.,
                     -self.facing.dims()[0].get(),
                 ];
                 let mut direction = Vector::new(direction.map(|x| FiniteF64::new(x).unwrap()));
-                direction.normalize();
-                direction.mul(dist);
+                direction.mul(sway);
                 direction
-            }
-            CameraMovement::Front | CameraMovement::Back => {
+            };
+            let surge = {
                 let direction = [self.facing.dims()[0].get(), 0., self.facing.dims()[2].get()];
                 let mut direction = Vector::new(direction.map(|x| FiniteF64::new(x).unwrap()));
-                direction.normalize();
-                direction.mul(dist);
+                direction.mul(surge);
                 direction
-            }
+            };
+            let mut horizontal = sway.add(&surge);
+            horizontal.set_mag(dist);
+            Some(horizontal)
         };
-        self.position = self.position.add(&dist);
+        let horizontal = horizontal();
+
+        let vertical = || {
+            direction.heave?;
+            let mut vertical = Vector::new([0., -heave, 0.].map(|x| FiniteF64::new(x).unwrap()));
+            vertical.set_mag(dist);
+            Some(vertical)
+        };
+        let vertical = vertical();
+
+        let translation = match (horizontal, vertical) {
+            (None, None) => return,
+            (None, Some(x)) => x,
+            (Some(x), None) => x,
+            (Some(a), Some(b)) => a.add(&b),
+        };
+        self.position = self.position.add(&translation);
     }
 
     pub fn view_matrix(&self) -> TransformMatrix {
@@ -76,11 +107,29 @@ impl Default for Camera {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum CameraMovement {
-    Up,
-    Down, //
+pub struct CameraWalk {
+    pub surge: Option<Surge>,
+    pub sway: Option<Sway>,
+    pub heave: Option<Heave>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Surge {
+    Forward,
+    Backward,
+}
+#[derive(Debug, Clone, Copy)]
+pub enum Sway {
     Left,
-    Right, //
-    Front,
-    Back, //
+    Right,
+}
+#[derive(Debug, Clone, Copy)]
+pub enum Heave {
+    Up,
+    Down,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CameraMovement {
+    pub walk: CameraWalk,
 }

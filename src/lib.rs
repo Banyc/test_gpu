@@ -1,7 +1,10 @@
+use input::InputState;
+
 pub mod camera;
 pub mod compute;
 pub mod delta_time;
 pub mod gpu;
+pub mod input;
 pub mod texture;
 pub mod transform;
 pub mod triangle;
@@ -21,19 +24,38 @@ pub trait RenderInit: core::fmt::Debug {
     fn init(&self, args: RenderInitArgs<'_>) -> Box<dyn RenderApp>;
 }
 
+#[derive(Debug, Clone)]
+pub struct RenderContext {
+    pub input: InputState,
+}
+impl RenderContext {
+    pub fn new() -> Self {
+        Self {
+            input: InputState::new(),
+        }
+    }
+}
+impl Default for RenderContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug)]
 pub struct DrawArgs<'a> {
     pub view: wgpu::TextureView,
     pub device: &'a wgpu::Device,
     pub queue: &'a wgpu::Queue,
+    pub context: &'a RenderContext,
 }
 pub trait Draw {
     fn draw(&mut self, args: DrawArgs<'_>) -> RenderNextStep;
 }
 
 #[derive(Debug)]
-pub struct UpdateArgs {
+pub struct UpdateArgs<'a> {
     pub event: winit::event::WindowEvent,
+    pub context: &'a RenderContext,
 }
 pub trait Update {
     fn update(&mut self, args: UpdateArgs) -> RenderNextStep;
@@ -43,6 +65,7 @@ pub trait Update {
 pub struct ResizeArgs<'a> {
     pub device: &'a wgpu::Device,
     pub size: WndSize,
+    pub context: &'a RenderContext,
 }
 pub trait Resize {
     fn resize(&mut self, args: ResizeArgs<'_>) -> RenderNextStep;

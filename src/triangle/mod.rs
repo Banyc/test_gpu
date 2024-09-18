@@ -8,12 +8,12 @@ use num_traits::Float;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    camera::{Camera, CameraMovement},
+    camera::{Camera, CameraMovement, CameraWalk, Heave, Surge, Sway},
     delta_time::DeltaTime,
     texture::{DepthBuffer, ImageSampler, ImageTexture},
     transform::{perspective, rotate, translate},
-    Draw, DrawArgs, RenderApp, RenderInit, RenderInitArgs, RenderNextStep, Resize, ResizeArgs,
-    Update, UpdateArgs, WndSize,
+    Draw, DrawArgs, RenderApp, RenderContext, RenderInit, RenderInitArgs, RenderNextStep, Resize,
+    ResizeArgs, Update, UpdateArgs, WndSize,
 };
 
 const SHADER: &str = include_str!("triangle.wgsl");
@@ -206,10 +206,46 @@ impl DrawTriangle {
             draw_delta_time,
         }
     }
+
+    fn update_camera(&mut self, context: &RenderContext) {
+        let Some(delta_time) = self.draw_delta_time.delta() else {
+            return;
+        };
+        let is_w = context.input.is_key_pressed(winit::keyboard::KeyCode::KeyW);
+        let is_s = context.input.is_key_pressed(winit::keyboard::KeyCode::KeyS);
+        let surge = match (is_w, is_s) {
+            (true, true) | (false, false) => None,
+            (true, false) => Some(Surge::Forward),
+            (false, true) => Some(Surge::Backward),
+        };
+        let is_a = context.input.is_key_pressed(winit::keyboard::KeyCode::KeyA);
+        let is_d = context.input.is_key_pressed(winit::keyboard::KeyCode::KeyD);
+        let sway = match (is_a, is_d) {
+            (true, true) | (false, false) => None,
+            (true, false) => Some(Sway::Left),
+            (false, true) => Some(Sway::Right),
+        };
+        let is_space = context
+            .input
+            .is_key_pressed(winit::keyboard::KeyCode::Space);
+        let is_shift_left = context
+            .input
+            .is_key_pressed(winit::keyboard::KeyCode::ShiftLeft);
+        let heave = match (is_space, is_shift_left) {
+            (true, true) | (false, false) => None,
+            (true, false) => Some(Heave::Up),
+            (false, true) => Some(Heave::Down),
+        };
+        let movement = CameraMovement {
+            walk: CameraWalk { surge, sway, heave },
+        };
+        self.camera.mov(movement, delta_time.as_secs_f64());
+    }
 }
 impl Draw for DrawTriangle {
     fn draw(&mut self, args: DrawArgs<'_>) -> RenderNextStep {
         self.draw_delta_time.update(Instant::now());
+        self.update_camera(args.context);
         let gray = wgpu::Color {
             r: 0.2,
             g: 0.3,
@@ -318,30 +354,7 @@ impl Draw for DrawTriangle {
     }
 }
 impl Update for DrawTriangle {
-    fn update(&mut self, args: UpdateArgs) -> RenderNextStep {
-        if let winit::event::WindowEvent::KeyboardInput {
-            device_id: _,
-            event,
-            is_synthetic: _,
-        } = &args.event
-        {
-            if let winit::keyboard::PhysicalKey::Code(key_code) = event.physical_key {
-                if let Some(delta_time) = self.draw_delta_time.delta() {
-                    let direction = match key_code {
-                        winit::keyboard::KeyCode::KeyW => Some(CameraMovement::Front),
-                        winit::keyboard::KeyCode::KeyS => Some(CameraMovement::Back),
-                        winit::keyboard::KeyCode::KeyA => Some(CameraMovement::Left),
-                        winit::keyboard::KeyCode::KeyD => Some(CameraMovement::Right),
-                        winit::keyboard::KeyCode::Space => Some(CameraMovement::Up),
-                        winit::keyboard::KeyCode::ShiftLeft => Some(CameraMovement::Down),
-                        _ => None,
-                    };
-                    if let Some(direction) = direction {
-                        self.camera.mov(direction, delta_time.as_secs_f64());
-                    }
-                }
-            }
-        }
+    fn update(&mut self, _args: UpdateArgs) -> RenderNextStep {
         RenderNextStep {
             should_request_redraw: false,
         }
