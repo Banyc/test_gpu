@@ -10,6 +10,7 @@ use winit::{
 
 use crate::{
     gpu::{adapter, device, instance},
+    input::Position2D,
     DrawArgs, RenderApp, RenderContext, RenderInit, RenderInitArgs, RenderNextStep, ResizeArgs,
     UpdateArgs, WndSize,
 };
@@ -142,6 +143,17 @@ impl ActiveWnd {
         } = &event
         {
             self.context.input.update_key(event);
+        }
+        if let winit::event::WindowEvent::CursorMoved {
+            device_id: _,
+            position,
+        } = &event
+        {
+            let pos = Position2D {
+                x: position.x,
+                y: position.y,
+            };
+            self.context.input.update_mouse(pos);
         }
         let args = UpdateArgs {
             event,

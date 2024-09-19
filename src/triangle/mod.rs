@@ -8,7 +8,7 @@ use num_traits::Float;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    camera::{Camera, DegreesOfMovement, Heave, Surge, Sway, TranslationalEnvelops},
+    camera::{Camera, Heave, RotationalMovement, Surge, Sway, TranslationalMovement},
     delta_time::DeltaTime,
     texture::{DepthBuffer, ImageSampler, ImageTexture},
     transform::{perspective, rotate, translate},
@@ -236,10 +236,8 @@ impl DrawTriangle {
             (true, false) => Some(Heave::Up),
             (false, true) => Some(Heave::Down),
         };
-        let movement = DegreesOfMovement {
-            transitional: TranslationalEnvelops { surge, sway, heave },
-        };
-        self.camera.mov(movement, delta_time.as_secs_f64());
+        let movement = TranslationalMovement { surge, sway, heave };
+        self.camera.translate(movement, delta_time.as_secs_f64());
     }
 }
 impl Draw for DrawTriangle {
@@ -354,7 +352,14 @@ impl Draw for DrawTriangle {
     }
 }
 impl Update for DrawTriangle {
-    fn update(&mut self, _args: UpdateArgs) -> RenderNextStep {
+    fn update(&mut self, args: UpdateArgs) -> RenderNextStep {
+        if let Some(mouse_change) = args.context.input.mouse_change() {
+            let movement = RotationalMovement {
+                yaw: -mouse_change.x / (2.).powi(4),
+                pitch: mouse_change.y / (2.).powi(4),
+            };
+            self.camera.rotate(movement);
+        }
         RenderNextStep {
             should_request_redraw: false,
         }
