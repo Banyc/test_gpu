@@ -1,7 +1,7 @@
 use std::num::NonZeroUsize;
 
 use math::{
-    matrix::{ArrayMatrixBuf, Size, VecMatrixBuf},
+    matrix::{ArrayMatrixBuf, Size},
     vector::Vector,
 };
 use strict_num::FiniteF64;
@@ -28,9 +28,7 @@ pub fn point(var: [f64; 3]) -> Point {
 }
 
 pub fn identity() -> TransformMatrix {
-    let m = VecMatrixBuf::identity(transform_size().rows);
-    let data = m.into_buffer().try_into().unwrap();
-    TransformMatrix::new(transform_size(), data)
+    TransformMatrix::identity(transform_size().rows)
 }
 pub fn scale(var: [f64; 3]) -> TransformMatrix {
     let data = [
