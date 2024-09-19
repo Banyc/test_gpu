@@ -153,7 +153,7 @@ impl ActiveWnd {
                 x: position.x,
                 y: position.y,
             };
-            self.context.input.update_mouse(pos);
+            self.context.input.update_cursor(pos);
         }
         let args = UpdateArgs {
             event,

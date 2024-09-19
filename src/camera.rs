@@ -14,6 +14,7 @@ pub struct Camera {
     sensitivity: f64,
     yaw: f64,
     pitch: f64,
+    fov: f64,
 }
 impl Camera {
     pub fn new() -> Self {
@@ -22,7 +23,8 @@ impl Camera {
             position: Vector::new([0., 0., 0.].map(|x| FiniteF64::new(x).unwrap())),
             sensitivity: 0.1,
             pitch: 0.,
-            yaw: PI / 2.,
+            yaw: -PI / 2.,
+            fov: PI / 4.,
         }
     }
     pub fn set_speed(&mut self, v: f64) {
@@ -46,6 +48,13 @@ impl Camera {
         ]
         .map(|x| FiniteF64::new(x).unwrap());
         Vector::new(dims)
+    }
+
+    pub fn zoom(&mut self, offset: f64) {
+        self.fov = (self.fov + offset).clamp(0.001, PI / 4.);
+    }
+    pub fn fov(&self) -> f64 {
+        self.fov
     }
 
     pub fn rotate(&mut self, movement: RotationalMovement) {

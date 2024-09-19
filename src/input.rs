@@ -3,15 +3,15 @@ use std::collections::HashSet;
 #[derive(Debug, Clone)]
 pub struct InputState {
     pressed: HashSet<winit::keyboard::KeyCode>,
-    mouse_pos: Option<Position2D>,
-    mouse_change: Option<Position2D>,
+    cursor_pos: Option<Position2D>,
+    cursor_change: Option<Position2D>,
 }
 impl InputState {
     pub fn new() -> Self {
         Self {
             pressed: HashSet::new(),
-            mouse_pos: None,
-            mouse_change: None,
+            cursor_pos: None,
+            cursor_change: None,
         }
     }
 
@@ -32,9 +32,9 @@ impl InputState {
         self.pressed.contains(&key)
     }
 
-    pub fn update_mouse(&mut self, position: Position2D) {
-        let prev = self.mouse_pos;
-        self.mouse_pos = Some(position);
+    pub fn update_cursor(&mut self, position: Position2D) {
+        let prev = self.cursor_pos;
+        self.cursor_pos = Some(position);
         let Some(prev) = prev else {
             return;
         };
@@ -42,10 +42,10 @@ impl InputState {
             x: position.x - prev.x,
             y: position.y - prev.y,
         };
-        self.mouse_change = Some(change);
+        self.cursor_change = Some(change);
     }
-    pub fn mouse_change(&self) -> Option<Position2D> {
-        self.mouse_change
+    pub fn cursor_change(&self) -> Option<Position2D> {
+        self.cursor_change
     }
 }
 impl Default for InputState {

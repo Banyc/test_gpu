@@ -289,7 +289,7 @@ impl Draw for DrawTriangle {
         // let view = look_at([sin * radius, 0., cos * radius], [0., 0., 0.], [0., 1., 0.]);
         let view = self.camera.view_matrix();
         let aspect = self.wnd_size.width as f64 / self.wnd_size.height as f64;
-        let projection = perspective(PI / 4., aspect, 0.1, 100.);
+        let projection = perspective(self.camera.fov(), aspect, 0.1, 100.);
 
         let model_positions = [
             [0.0, 0.0, 0.0],
@@ -353,10 +353,24 @@ impl Draw for DrawTriangle {
 }
 impl Update for DrawTriangle {
     fn update(&mut self, args: UpdateArgs) -> RenderNextStep {
-        if let Some(mouse_change) = args.context.input.mouse_change() {
+        if let winit::event::WindowEvent::MouseWheel {
+            device_id: _,
+            delta,
+            phase: _,
+        } = &args.event
+        {
+            let y = match delta {
+                winit::event::MouseScrollDelta::LineDelta(_, y) => *y as f64,
+                winit::event::MouseScrollDelta::PixelDelta(pos) => pos.y,
+            };
+            let scale_to_radian = (2.0_f64).powi(7);
+            self.camera.zoom(-y / scale_to_radian);
+        }
+        if let Some(cursor_change) = args.context.input.cursor_change() {
+            let scale_to_radian = (2.0_f64).powi(4);
             let movement = RotationalMovement {
-                yaw: -mouse_change.x / (2.).powi(4),
-                pitch: mouse_change.y / (2.).powi(4),
+                yaw: -cursor_change.x / scale_to_radian,
+                pitch: cursor_change.y / scale_to_radian,
             };
             self.camera.rotate(movement);
         }
