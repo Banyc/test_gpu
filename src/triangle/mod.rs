@@ -694,31 +694,6 @@ impl QuadVertexPos {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct CubeVertexPos {
-    pub top: QuadVertexPos,
-    pub bottom: QuadVertexPos,
-    pub left: QuadVertexPos,
-    pub right: QuadVertexPos,
-    pub front: QuadVertexPos,
-    pub behind: QuadVertexPos,
-}
-impl CubeVertexPos {
-    pub fn indices(&self) -> [u32; 36] {
-        self.top
-            .indices()
-            .into_iter()
-            .chain(self.bottom.indices())
-            .chain(self.left.indices())
-            .chain(self.right.indices())
-            .chain(self.front.indices())
-            .chain(self.behind.indices())
-            .collect::<Vec<u32>>()
-            .try_into()
-            .unwrap()
-    }
-}
-
 fn normalized_sin() -> f64 {
     let (sin, _) = waves();
     normalize_neg_pos_1(sin)
