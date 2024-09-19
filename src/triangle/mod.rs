@@ -364,7 +364,7 @@ impl Update for DrawTriangle {
                 winit::event::MouseScrollDelta::PixelDelta(pos) => pos.y,
             };
             let scale_to_radian = (2.0_f64).powi(7);
-            self.camera.zoom(-y / scale_to_radian);
+            self.camera.zoom(y / scale_to_radian);
         }
         if let Some(cursor_change) = args.context.input.cursor_change() {
             let scale_to_radian = (2.0_f64).powi(4);

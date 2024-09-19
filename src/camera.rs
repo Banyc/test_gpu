@@ -51,7 +51,7 @@ impl Camera {
     }
 
     pub fn zoom(&mut self, offset: f64) {
-        self.fov = (self.fov + offset).clamp(0.001, PI / 4.);
+        self.fov = (self.fov - offset).clamp(0.001, PI / 4.);
     }
     pub fn fov(&self) -> f64 {
         self.fov
