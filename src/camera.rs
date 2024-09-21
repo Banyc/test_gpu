@@ -33,6 +33,9 @@ impl Camera {
     pub fn set_position(&mut self, v: Vector<3>) {
         self.position = v;
     }
+    pub fn position(&self) -> Vector<3> {
+        self.position
+    }
     pub fn set_yaw(&mut self, yaw: f64) {
         self.yaw = yaw % TRI_PERIOD;
     }
@@ -60,13 +63,16 @@ impl Camera {
     pub fn rotate(&mut self, movement: RotationalMovement) {
         self.set_pitch(self.pitch + movement.pitch * self.sensitivity);
         self.set_yaw(self.yaw + movement.yaw * self.sensitivity);
+        dbg!(self.yaw);
+        dbg!(self.pitch);
+        dbg!(&self.facing());
     }
     pub fn translate(&mut self, movement: TranslationalMovement, elapsed: f64) {
         let dist = self.speed * elapsed;
         let surge = match movement.surge {
             None => 0.,
-            Some(Surge::Forward) => -1.,
-            Some(Surge::Backward) => 1.,
+            Some(Surge::Forward) => 1.,
+            Some(Surge::Backward) => -1.,
         };
         let sway = match movement.sway {
             None => 0.,
@@ -115,7 +121,7 @@ impl Camera {
             (Some(x), None) => x,
             (Some(a), Some(b)) => a.add(&b),
         };
-        self.position = self.position.sub(&translation);
+        self.position = self.position.add(&translation);
         dbg!(&self.position);
     }
 

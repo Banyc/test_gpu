@@ -96,7 +96,7 @@ pub fn look_at(h: [f64; 3], target: [f64; 3], up: [f64; 3]) -> TransformMatrix {
     let up = Vector::new(up.map(|x| FiniteF64::new(x).unwrap()));
     let mut k = h.sub(&target);
     k.normalize();
-    let mut i = k.cross(&up);
+    let mut i = up.cross(&k);
     i.normalize();
     let j = k.cross(&i);
     change_of_space(

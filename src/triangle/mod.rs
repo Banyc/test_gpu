@@ -259,7 +259,6 @@ impl Draw for DrawTriangle {
             },
         };
         let normalized_sin = normalized_sin();
-        dbg!(normalized_sin);
         // let trans = {
         //     let translate = translate([0.5, -0.5, 0.0]);
         //     let angle = sin * PI * 2.;
@@ -369,8 +368,8 @@ impl Update for DrawTriangle {
         if let Some(cursor_change) = args.context.input.cursor_change() {
             let scale_to_radian = (2.0_f64).powi(4);
             let movement = RotationalMovement {
-                yaw: -cursor_change.x / scale_to_radian,
-                pitch: cursor_change.y / scale_to_radian,
+                yaw: cursor_change.x / scale_to_radian,
+                pitch: -cursor_change.y / scale_to_radian,
             };
             self.camera.rotate(movement);
         }
