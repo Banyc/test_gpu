@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use math::vector::{ArrayVector, Container1D, Vector};
+use math::vector::VectorMut;
 
 use crate::transform::{look_at, TransformMatrix};
 
@@ -9,7 +9,7 @@ const TRI_PERIOD: f64 = 2. * PI;
 #[derive(Debug, Clone)]
 pub struct Camera {
     speed: f64,
-    position: ArrayVector<f64, 3>,
+    position: [f64; 3],
     sensitivity: f64,
     yaw: f64,
     pitch: f64,
@@ -19,7 +19,7 @@ impl Camera {
     pub fn new() -> Self {
         Self {
             speed: 2.5,
-            position: ArrayVector::full([0., 0., 0.]),
+            position: [0., 0., 0.],
             sensitivity: 0.1,
             pitch: 0.,
             yaw: -PI / 2.,
@@ -29,11 +29,10 @@ impl Camera {
     pub fn set_speed(&mut self, v: f64) {
         self.speed = v;
     }
-    pub fn set_position(&mut self, v: ArrayVector<f64, 3>) {
-        assert_eq!(self.position.dims().len(), v.dims().len());
+    pub fn set_position(&mut self, v: [f64; 3]) {
         self.position = v;
     }
-    pub fn position(&self) -> ArrayVector<f64, 3> {
+    pub fn position(&self) -> [f64; 3] {
         self.position
     }
     pub fn set_yaw(&mut self, yaw: f64) {
@@ -43,13 +42,12 @@ impl Camera {
         let near_perpendicular = PI / 2. - 0.001;
         self.pitch = (pitch % TRI_PERIOD).clamp(-near_perpendicular, near_perpendicular);
     }
-    pub fn facing(&self) -> ArrayVector<f64, 3> {
-        let dims = [
+    pub fn facing(&self) -> [f64; 3] {
+        [
             self.yaw.cos() * self.pitch.cos(),
             self.pitch.sin(),
             self.yaw.sin() * self.pitch.cos(),
-        ];
-        ArrayVector::full(dims)
+        ]
     }
 
     pub fn zoom(&mut self, offset: f64) {
@@ -89,14 +87,12 @@ impl Camera {
             }
             let facing = self.facing();
             let sway = {
-                let direction = [-facing.dims()[2], 0., facing.dims()[0]];
-                let mut direction = ArrayVector::full(direction);
+                let mut direction = [-facing[2], 0., facing[0]];
                 direction.mul(sway);
                 direction
             };
             let surge = {
-                let direction = [facing.dims()[0], 0., facing.dims()[2]];
-                let mut direction = ArrayVector::full(direction);
+                let mut direction = [facing[0], 0., facing[2]];
                 direction.mul(surge);
                 direction
             };
@@ -109,7 +105,7 @@ impl Camera {
 
         let vertical = || {
             movement.heave?;
-            let mut vertical = ArrayVector::full([0., heave, 0.]);
+            let mut vertical = [0., heave, 0.];
             vertical.set_mag(dist);
             Some(vertical)
         };
@@ -132,7 +128,7 @@ impl Camera {
     pub fn view_matrix(&self) -> TransformMatrix {
         let mut at = self.position;
         at.add(&self.facing());
-        look_at(&self.position, &at, &ArrayVector::full([0., 1., 0.]))
+        look_at(self.position, at, [0., 1., 0.])
     }
 }
 impl Default for Camera {

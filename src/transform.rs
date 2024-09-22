@@ -2,10 +2,10 @@ use std::num::NonZeroUsize;
 
 use math::{
     matrix::{ArrayMatrix, Size},
-    vector::{ArrayVector, Container1D, Vector},
+    vector::{Vector, VectorMut},
 };
 
-pub type Point = ArrayVector<f64, 4>;
+pub type Point = [f64; 4];
 pub type PointMatrix = ArrayMatrix<f64, 4>;
 pub fn point_size() -> Size {
     Size {
@@ -22,8 +22,7 @@ pub fn transform_size() -> Size {
 }
 
 pub fn point(var: [f64; 3]) -> Point {
-    let dims = [var[0], var[1], var[2], 1.];
-    ArrayVector::full(dims)
+    [var[0], var[1], var[2], 1.]
 }
 
 pub fn identity() -> TransformMatrix {
@@ -47,13 +46,12 @@ pub fn translate(var: [f64; 3]) -> TransformMatrix {
     ];
     TransformMatrix::new(transform_size(), data)
 }
-pub fn rotate(mut axises: impl Vector<f64>, angle: f64) -> TransformMatrix {
-    assert_eq!(axises.dims().len(), 3);
+pub fn rotate(mut axises: [f64; 3], angle: f64) -> TransformMatrix {
     let cos = angle.cos();
     let cos_com = 1. - angle.cos();
     let sin = angle.sin();
     axises.normalize();
-    let a = axises.dims();
+    let a = axises;
     let data = [
         // row
         cos + (a[0].powi(2) * cos_com),
@@ -89,22 +87,14 @@ pub fn change_of_space(i: [f64; 3], j: [f64; 3], k: [f64; 3], h: [f64; 3]) -> Tr
     let origin_translate = translate(h.map(|x| -x));
     change_of_axises.mul_matrix_square(&origin_translate)
 }
-pub fn look_at<H>(h: &H, target: &impl Vector<f64>, up: &impl Vector<f64>) -> TransformMatrix
-where
-    H: Vector<f64> + Clone,
-{
-    let mut k = h.clone();
-    k.sub(target);
+pub fn look_at(h: [f64; 3], target: [f64; 3], up: [f64; 3]) -> TransformMatrix {
+    let mut k: [f64; 3] = h;
+    k.sub(&target);
     k.normalize();
     let mut i = up.cross(&k);
     i.normalize();
     let j = k.cross(&i);
-    change_of_space(
-        i.dims().try_into().unwrap(),
-        j.dims().try_into().unwrap(),
-        k.dims().try_into().unwrap(),
-        h.dims().try_into().unwrap(),
-    )
+    change_of_space(i, j, k, h)
 }
 pub fn orthographic(
     left: f64,

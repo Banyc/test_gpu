@@ -8,7 +8,7 @@ anyhow = "1"
 bytemuck = "1"
 bytemuck_derive = "1"
 image = "0.25"
-math = { git = "https://github.com/Banyc/math.git", tag = "v0.0.15" }
+math = { git = "https://github.com/Banyc/math.git", tag = "v0.0.17" }
 num-traits = "0.2"
 pollster = "0.3"
 strict-num = "0.2"

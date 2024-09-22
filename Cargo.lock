@@ -1093,7 +1093,7 @@ dependencies = [
 [[package]]
 name = "math"
 version = "0.1.0"
-source = "git+https://github.com/Banyc/math.git?tag=v0.0.15#ce26fab36bf9a91898a7ed0572ced761f69fe75f"
+source = "git+https://github.com/Banyc/math.git?tag=v0.0.17#b906aadb4c6b85f4d383f08d9c8971c802fb068e"
 dependencies = [
  "getset",
  "num-traits",
