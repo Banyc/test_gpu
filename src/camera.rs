@@ -1,7 +1,6 @@
 use std::f64::consts::PI;
 
 use math::vector::Vector;
-use strict_num::FiniteF64;
 
 use crate::transform::{look_at, TransformMatrix};
 
@@ -10,7 +9,7 @@ const TRI_PERIOD: f64 = 2. * PI;
 #[derive(Debug, Clone)]
 pub struct Camera {
     speed: f64,
-    position: Vector<3>,
+    position: Vector<f64, 3>,
     sensitivity: f64,
     yaw: f64,
     pitch: f64,
@@ -20,7 +19,7 @@ impl Camera {
     pub fn new() -> Self {
         Self {
             speed: 2.5,
-            position: Vector::new([0., 0., 0.].map(|x| FiniteF64::new(x).unwrap())),
+            position: Vector::new([0., 0., 0.]),
             sensitivity: 0.1,
             pitch: 0.,
             yaw: -PI / 2.,
@@ -30,10 +29,10 @@ impl Camera {
     pub fn set_speed(&mut self, v: f64) {
         self.speed = v;
     }
-    pub fn set_position(&mut self, v: Vector<3>) {
+    pub fn set_position(&mut self, v: Vector<f64, 3>) {
         self.position = v;
     }
-    pub fn position(&self) -> Vector<3> {
+    pub fn position(&self) -> Vector<f64, 3> {
         self.position
     }
     pub fn set_yaw(&mut self, yaw: f64) {
@@ -43,13 +42,12 @@ impl Camera {
         let near_perpendicular = PI / 2. - 0.001;
         self.pitch = (pitch % TRI_PERIOD).clamp(-near_perpendicular, near_perpendicular);
     }
-    pub fn facing(&self) -> Vector<3> {
+    pub fn facing(&self) -> Vector<f64, 3> {
         let dims = [
             self.yaw.cos() * self.pitch.cos(),
             self.pitch.sin(),
             self.yaw.sin() * self.pitch.cos(),
-        ]
-        .map(|x| FiniteF64::new(x).unwrap());
+        ];
         Vector::new(dims)
     }
 
@@ -90,14 +88,14 @@ impl Camera {
             }
             let facing = self.facing();
             let sway = {
-                let direction = [-facing.dims()[2].get(), 0., facing.dims()[0].get()];
-                let mut direction = Vector::new(direction.map(|x| FiniteF64::new(x).unwrap()));
+                let direction = [-facing.dims()[2], 0., facing.dims()[0]];
+                let mut direction = Vector::new(direction);
                 direction.mul(sway);
                 direction
             };
             let surge = {
-                let direction = [facing.dims()[0].get(), 0., facing.dims()[2].get()];
-                let mut direction = Vector::new(direction.map(|x| FiniteF64::new(x).unwrap()));
+                let direction = [facing.dims()[0], 0., facing.dims()[2]];
+                let mut direction = Vector::new(direction);
                 direction.mul(surge);
                 direction
             };
@@ -109,7 +107,7 @@ impl Camera {
 
         let vertical = || {
             movement.heave?;
-            let mut vertical = Vector::new([0., heave, 0.].map(|x| FiniteF64::new(x).unwrap()));
+            let mut vertical = Vector::new([0., heave, 0.]);
             vertical.set_mag(dist);
             Some(vertical)
         };
@@ -127,11 +125,7 @@ impl Camera {
 
     pub fn view_matrix(&self) -> TransformMatrix {
         let at = self.position.add(&self.facing());
-        look_at(
-            self.position.dims().map(|x| x.get()),
-            at.dims().map(|x| x.get()),
-            [0., 1., 0.],
-        )
+        look_at(self.position, at, Vector::new([0., 1., 0.]))
     }
 }
 impl Default for Camera {

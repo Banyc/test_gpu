@@ -4,9 +4,8 @@ use math::{
     matrix::{ArrayMatrixBuf, Size},
     vector::Vector,
 };
-use strict_num::FiniteF64;
 
-pub type Point = Vector<4>;
+pub type Point = Vector<f64, 4>;
 pub type PointMatrix = ArrayMatrixBuf<f64, 4>;
 pub fn point_size() -> Size {
     Size {
@@ -23,7 +22,7 @@ pub fn transform_size() -> Size {
 }
 
 pub fn point(var: [f64; 3]) -> Point {
-    let dims = [var[0], var[1], var[2], 1.].map(|x| FiniteF64::new(x).unwrap());
+    let dims = [var[0], var[1], var[2], 1.];
     Vector::new(dims)
 }
 
@@ -48,13 +47,12 @@ pub fn translate(var: [f64; 3]) -> TransformMatrix {
     ];
     TransformMatrix::new(transform_size(), data)
 }
-pub fn rotate(axises: [f64; 3], angle: f64) -> TransformMatrix {
+pub fn rotate(mut axises: Vector<f64, 3>, angle: f64) -> TransformMatrix {
     let cos = angle.cos();
     let cos_com = 1. - angle.cos();
     let sin = angle.sin();
-    let mut a = Vector::new(axises.map(|x| FiniteF64::new(x).unwrap()));
-    a.normalize();
-    let a = a.dims().map(|x| x.get());
+    axises.normalize();
+    let a = axises.dims();
     let data = [
         // row
         cos + (a[0].powi(2) * cos_com),
@@ -90,21 +88,13 @@ pub fn change_of_space(i: [f64; 3], j: [f64; 3], k: [f64; 3], h: [f64; 3]) -> Tr
     let origin_translate = translate(h.map(|x| -x));
     change_of_axises.mul_matrix_square(&origin_translate)
 }
-pub fn look_at(h: [f64; 3], target: [f64; 3], up: [f64; 3]) -> TransformMatrix {
-    let h = Vector::new(h.map(|x| FiniteF64::new(x).unwrap()));
-    let target = Vector::new(target.map(|x| FiniteF64::new(x).unwrap()));
-    let up = Vector::new(up.map(|x| FiniteF64::new(x).unwrap()));
+pub fn look_at(h: Vector<f64, 3>, target: Vector<f64, 3>, up: Vector<f64, 3>) -> TransformMatrix {
     let mut k = h.sub(&target);
     k.normalize();
     let mut i = up.cross(&k);
     i.normalize();
     let j = k.cross(&i);
-    change_of_space(
-        i.dims().map(|x| x.get()),
-        j.dims().map(|x| x.get()),
-        k.dims().map(|x| x.get()),
-        h.dims().map(|x| x.get()),
-    )
+    change_of_space(*i.dims(), *j.dims(), *k.dims(), *h.dims())
 }
 pub fn orthographic(
     left: f64,
