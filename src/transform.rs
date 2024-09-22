@@ -1,19 +1,19 @@
 use std::num::NonZeroUsize;
 
 use math::{
-    matrix::{ArrayMatrixBuf, Size},
-    vector::Vector,
+    matrix::{ArrayMatrix, Size},
+    vector::{ArrayVector, Container1D, Vector},
 };
 
-pub type Point = Vector<f64, 4>;
-pub type PointMatrix = ArrayMatrixBuf<f64, 4>;
+pub type Point = ArrayVector<f64, 4>;
+pub type PointMatrix = ArrayMatrix<f64, 4>;
 pub fn point_size() -> Size {
     Size {
         rows: NonZeroUsize::new(4).unwrap(),
         cols: NonZeroUsize::new(1).unwrap(),
     }
 }
-pub type TransformMatrix = ArrayMatrixBuf<f64, 16>;
+pub type TransformMatrix = ArrayMatrix<f64, 16>;
 pub fn transform_size() -> Size {
     Size {
         rows: NonZeroUsize::new(4).unwrap(),
@@ -23,7 +23,7 @@ pub fn transform_size() -> Size {
 
 pub fn point(var: [f64; 3]) -> Point {
     let dims = [var[0], var[1], var[2], 1.];
-    Vector::new(dims)
+    ArrayVector::full(dims)
 }
 
 pub fn identity() -> TransformMatrix {
@@ -47,7 +47,8 @@ pub fn translate(var: [f64; 3]) -> TransformMatrix {
     ];
     TransformMatrix::new(transform_size(), data)
 }
-pub fn rotate(mut axises: Vector<f64, 3>, angle: f64) -> TransformMatrix {
+pub fn rotate(mut axises: impl Vector<f64>, angle: f64) -> TransformMatrix {
+    assert_eq!(axises.dims().len(), 3);
     let cos = angle.cos();
     let cos_com = 1. - angle.cos();
     let sin = angle.sin();
@@ -84,17 +85,26 @@ pub fn change_of_space(i: [f64; 3], j: [f64; 3], k: [f64; 3], h: [f64; 3]) -> Tr
         k[0], k[1], k[2], 0., //
         0., 0., 0., 1., //
     ];
-    let change_of_axises = ArrayMatrixBuf::new(transform_size(), data);
+    let change_of_axises = ArrayMatrix::new(transform_size(), data);
     let origin_translate = translate(h.map(|x| -x));
     change_of_axises.mul_matrix_square(&origin_translate)
 }
-pub fn look_at(h: Vector<f64, 3>, target: Vector<f64, 3>, up: Vector<f64, 3>) -> TransformMatrix {
-    let mut k = h.sub(&target);
+pub fn look_at<H>(h: &H, target: &impl Vector<f64>, up: &impl Vector<f64>) -> TransformMatrix
+where
+    H: Vector<f64> + Clone,
+{
+    let mut k = h.clone();
+    k.sub(target);
     k.normalize();
     let mut i = up.cross(&k);
     i.normalize();
     let j = k.cross(&i);
-    change_of_space(*i.dims(), *j.dims(), *k.dims(), *h.dims())
+    change_of_space(
+        i.dims().try_into().unwrap(),
+        j.dims().try_into().unwrap(),
+        k.dims().try_into().unwrap(),
+        h.dims().try_into().unwrap(),
+    )
 }
 pub fn orthographic(
     left: f64,
@@ -181,7 +191,7 @@ mod tests {
         let mut p: PointMatrix = point.into();
         m.mul_matrix_in(&p.clone(), &mut p);
         dbg!(&p);
-        assert!(p.closes_to(&ArrayMatrixBuf::new(point_size(), [3., 6., 9., 1.])));
-        let _ = Point::try_from_matrix(p).unwrap();
+        assert!(p.closes_to(&ArrayMatrix::new(point_size(), [3., 6., 9., 1.])));
+        let _ = Point::from(p);
     }
 }

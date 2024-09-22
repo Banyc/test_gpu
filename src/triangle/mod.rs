@@ -4,7 +4,7 @@ use std::{
 };
 
 use bytemuck_derive::{Pod, Zeroable};
-use math::vector::Vector;
+use math::vector::ArrayVector;
 use num_traits::Float;
 use wgpu::util::DeviceExt;
 
@@ -306,7 +306,7 @@ impl Draw for DrawTriangle {
         let models = model_positions.into_iter().map(translate);
         for (i, model_position) in models.enumerate() {
             let rotate = rotate(
-                Vector::new([1., 0.3, 0.5]),
+                ArrayVector::full([1., 0.3, 0.5]),
                 normalized_sin * i as f64 * 20. * PI / 180.,
             );
             let model = model_position.mul_matrix_square(&rotate);
