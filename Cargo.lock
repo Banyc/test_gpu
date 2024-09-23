@@ -1093,13 +1093,12 @@ dependencies = [
 [[package]]
 name = "math"
 version = "0.1.0"
-source = "git+https://github.com/Banyc/math.git?tag=v0.0.17#b906aadb4c6b85f4d383f08d9c8971c802fb068e"
+source = "git+https://github.com/Banyc/math.git?tag=v0.0.20#11b0a798b283efe124338b79d7a8076394664052"
 dependencies = [
  "getset",
  "num-traits",
  "primitive",
  "serde",
- "statistical_inference",
  "strict-num 0.2.0",
  "thiserror",
 ]
@@ -1942,12 +1941,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "reikna"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "587f2b12c725829d56d8192817535cbfe3c4b5daf294622765cec5969d980eca"
-
-[[package]]
 name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2182,16 +2175,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
-name = "statistical_inference"
-version = "0.1.0"
-source = "git+https://github.com/Banyc/statistical_inference.git?tag=v0.0.3#e7af02a9adebf3ec21e2adcb84db679e25ae8c9b"
-dependencies = [
- "once_cell",
- "reikna",
- "strict-num 0.2.0",
-]
-
-[[package]]
 name = "strict-num"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2278,18 +2261,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.63"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0342370b38b6a11b6cc11d6a805569958d54cfa061a29969c3b5ce2ea405724"
+checksum = "d50af8abc119fb8bb6dbabcfa89656f46f84aa0ac7688088608076ad2b459a84"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.63"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4558b58466b9ad7ca0f102865eccc95938dca1a74a856f2b57b6629050da261"
+checksum = "08904e7672f5eb876eaaf87e0ce17857500934f4981c4a0ab2b4aa98baac7fc3"
 dependencies = [
  "proc-macro2",
  "quote",

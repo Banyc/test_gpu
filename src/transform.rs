@@ -178,10 +178,10 @@ mod tests {
         assert!(m.closes_to(&expected));
 
         let point = point([1., 2., 3.]);
-        let mut p: PointMatrix = point.into();
+        let mut p: PointMatrix = point.into_matrix().unwrap();
         m.mul_matrix_in(&p.clone(), &mut p);
         dbg!(&p);
         assert!(p.closes_to(&ArrayMatrix::new(point_size(), [3., 6., 9., 1.])));
-        let _ = Point::from(p);
+        Point::try_from(p).unwrap();
     }
 }
